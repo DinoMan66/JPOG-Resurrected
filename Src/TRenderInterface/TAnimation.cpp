@@ -761,10 +761,6 @@ TAnimation::~TAnimation()                                               // 0x866
 {
 }
 
-TAnimation::TAnimation()                                                // 0x8680
-{
-}
-
 float TAnimation::GetSpeed()            { return m_fSpeed; }            // 0x8690
 float TAnimation::GetSeqTime()          { return m_fSeqTime; }          // 0x86a0
 float TAnimation::GetTotalTime()        { return m_fTotalTime; }        // 0x86b0
@@ -815,10 +811,6 @@ void TAnimation::SetMode(MODE mode)                                     // 0x878
 
 // ---------------------------------------------------------------- TSkeletonInstance
 TSkeletonInstance::~TSkeletonInstance()                                 // 0x8800
-{
-}
-
-TSkeletonInstance::TSkeletonInstance()                                  // 0x88d0
 {
 }
 

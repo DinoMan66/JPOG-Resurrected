@@ -20,7 +20,7 @@ public:
         T* Next() const { return m_pNext; }
         T* Prev() const { return m_pPrev; }
         TNodeList* GetList() const { return m_pList; }
-        bool IsLinked() const { return m_pList != 0; }
+        bool IsLinked() const { return (m_pList != 0) ? true : false; }
 
         TNodeList* m_pList;     // +0
         T*         m_pNext;     // +4

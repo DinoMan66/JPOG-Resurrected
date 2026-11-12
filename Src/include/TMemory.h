@@ -1,6 +1,7 @@
 // Toshi memory + import helpers (reconstructed).
 // TKernelInterface.dll exports these; every other Toshi DLL imports them.
 //   ?tmalloc@@YGPAXHPADH@Z   void* __stdcall tmalloc(int size, char* file, int line)
+//   ?tcalloc@@YGPAXHH@Z      void* __stdcall tcalloc(int count, int size)
 //   ?tfree@@YGXPAX@Z         void  __stdcall tfree(void* p)
 // The "YG" in the decorated names means __stdcall, which is the default here because
 // every Toshi DLL is compiled with -Gz.
@@ -12,6 +13,7 @@
 #endif
 
 TOSHI_API void* tmalloc(int size, char* file, int line);
+TOSHI_API void* tcalloc(int count, int size);
 TOSHI_API void  tfree(void* p);
 
 #endif

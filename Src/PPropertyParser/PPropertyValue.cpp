@@ -77,7 +77,7 @@ PPropertyValue::PPropertyValue(PPropertyValueArray* value)
 
 PPropertyValue::PPropertyValue(TObject* value)
 {
-    m_pType = value ? &value->GetClass() : TYPE_UNDEF;
+    m_pType = (value == 0) ? TYPE_UNDEF : &value->GetClass();
     m_uValue.obj = value;
 }
 
@@ -150,7 +150,7 @@ bool PPropertyValue::IsEmpty() const
 {
     if (m_pType == TYPE_TPCSTRING) return GetTPCString().IsEmpty();
     else if (m_pType == TYPE_TPWSTRING) return GetTPWString().IsEmpty();
-    else if (m_pType == TYPE_TLSTRING) return GetTLString().IsEmpty();
+    else if (m_pType == TYPE_TLSTRING) return GetTLString()->IsEmpty();
     else if (m_pType == TYPE_INT) return false;
     else if (m_pType == TYPE_UINT32) return false;
     else if (m_pType == TYPE_FLOAT) return false;
@@ -330,21 +330,27 @@ bool PPropertyValueArray::GetTVector2(TVector2& v) const
 
 bool PPropertyValueArray::GetTVector3(TVector3& v) const
 {
-    if (!CanBeTypeArray(PPropertyValue::TYPE_FLOAT, 3)) return false;
-    v.x = m_oValues.m_data[0].GetFloat();
-    v.y = m_oValues.m_data[1].GetFloat();
-    v.z = m_oValues.m_data[2].GetFloat();
-    return true;
+    if (CanBeTypeArray(PPropertyValue::TYPE_FLOAT, 3))
+    {
+        v.x = m_oValues.m_data[0].GetFloat();
+        v.y = m_oValues.m_data[1].GetFloat();
+        v.z = m_oValues.m_data[2].GetFloat();
+        return true;
+    }
+    return false;
 }
 
 bool PPropertyValueArray::GetTQuaternion(TQuaternion& q) const
 {
-    if (!CanBeTypeArray(PPropertyValue::TYPE_FLOAT, 4)) return false;
-    q.x = m_oValues.m_data[0].GetFloat();
-    q.y = m_oValues.m_data[1].GetFloat();
-    q.z = m_oValues.m_data[2].GetFloat();
-    q.w = m_oValues.m_data[3].GetFloat();
-    return true;
+    if (CanBeTypeArray(PPropertyValue::TYPE_FLOAT, 4))
+    {
+        q.x = m_oValues.m_data[0].GetFloat();
+        q.y = m_oValues.m_data[1].GetFloat();
+        q.z = m_oValues.m_data[2].GetFloat();
+        q.w = m_oValues.m_data[3].GetFloat();
+        return true;
+    }
+    return false;
 }
 
 // count == -1: any size

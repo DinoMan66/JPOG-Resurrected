@@ -141,6 +141,17 @@ public:
     TPWString& operator=(const TPWString& o);
     bool operator==(const TPWString& o) const { return m_pPooled == o.m_pPooled; }
     const TWString& GetWString() const { return m_pPooled ? m_pPooled->m_oString : ms_sEmpty; }
+    // the kernel also exports operator* and operator const TWString* (??D / ??B)
+    const TWString& operator*() const
+    {
+        if (!m_pPooled) return ms_sEmpty;
+        return m_pPooled->m_oString;
+    }
+    operator const TWString*() const
+    {
+        if (!m_pPooled) return &ms_sEmpty;
+        return &m_pPooled->m_oString;
+    }
     bool IsEmpty() const { return GetWString().IsEmpty(); }
 
     TOSHI_API static const TWString ms_sEmpty;

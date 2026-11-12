@@ -28,6 +28,7 @@ public:
     TOSHI_API const char* GetName() const;
     TOSHI_API TObject* CreateObject() const;
     TOSHI_API TObject* CreateObjectInPlace(void* memory) const;
+    TOSHI_API bool IsA(const TClass& other) const;
     TOSHI_API unsigned short GetVersionMajor() const;
     TOSHI_API unsigned short GetVersionMinor() const;
     TOSHI_API static const TClass* __stdcall Find(const char* name, const TClass* parent);

@@ -19,8 +19,23 @@ public:
     TOSHI_API ~TFreeList();
     TOSHI_API void* New(unsigned int size);
     TOSHI_API void  Delete(void* p);
+    TOSHI_API int GetCapacity() const;
+    TOSHI_API int GetGrowSize() const;
+    TOSHI_API void SetGrowSize(int grow);
+    TOSHI_API void SetCapacity(int capacity);
+    struct Node
+    {
+        Node* m_pNext;
+    };
+protected:
+    TOSHI_API Node* Allocate(int count, unsigned int blockSize);
 private:
-    unsigned char m_data[0x20];
+    int   m_iCapacity;      // +0x00
+    int   m_iBlockSize;     // +0x04
+    Node* m_pFree;          // +0x08
+    void* m_pBlocks;        // +0x0C
+    int   m_iGrowSize;      // +0x10
+    unsigned char m_rest[0x0C];     // +0x14: name etc.
 };
 
 } // namespace Toshi

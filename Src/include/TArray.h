@@ -112,6 +112,7 @@ public:
 #endif
     T& operator[](const Iterator& it) { return m_data[it.m_index]; }
     T& operator[](int i) { return m_data[i]; }
+    const T& operator[](int i) const { return m_data[i]; }
 
     int Count() const { return m_count; }
 

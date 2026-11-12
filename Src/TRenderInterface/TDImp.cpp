@@ -96,8 +96,8 @@ void TDImp::BoneSpaceTransform(TBone* bone, TVector3& point, TAABox& box, bool& 
     transformed.Add(translation);
     if (!first)
     {
-        box.m_oMin = transformed;
-        box.m_oMax = TVector3::VEC_ZERO;
+        box.m_oCentre = transformed;
+        box.m_oBounds = TVector3::VEC_ZERO;
     }
     else
     {

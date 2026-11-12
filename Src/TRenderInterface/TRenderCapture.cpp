@@ -5,10 +5,6 @@
 
 namespace Toshi {
 
-TRenderCapture::~TRenderCapture()                                       // 0x9bf0
-{
-}
-
 TRenderCapture::TRenderCapture()                                        // 0x9c00
 {
 }

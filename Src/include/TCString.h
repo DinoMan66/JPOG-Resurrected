@@ -85,10 +85,11 @@ private:
     TOSHI_API bool AllocBuffer(int len, bool keep);
     TOSHI_API void FreeBuffer();
     TOSHI_API void Reset();
-    TOSHI_API static char* m_aNull;
+    TOSHI_API static char m_aNull[1];
 
-    char* m_pBuffer;        // +0
-    int   m_iExcess;        // +4
+    char* m_pBuffer;                // +0
+    unsigned int m_iStrLen : 24;    // +4 (low 24 bits)
+    unsigned int m_iExcess : 8;     // +7
 };
 
 class TWString
@@ -155,10 +156,11 @@ private:
     TOSHI_API bool AllocBuffer(int len, bool keep);
     TOSHI_API void FreeBuffer();
     TOSHI_API void Reset();
-    TOSHI_API static TWChar* m_aNull;
+    TOSHI_API static TWChar m_aNull[1];
 
-    TWChar* m_pBuffer;      // +0
-    int     m_iExcess;      // +4
+    TWChar* m_pBuffer;              // +0
+    unsigned int m_iStrLen : 24;    // +4 (low 24 bits)
+    unsigned int m_iExcess : 8;     // +7
 };
 
 // free operators (YG = __stdcall, the -Gz default)

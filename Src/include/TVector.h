@@ -12,6 +12,14 @@
 // Rule used here: kernel functions that no JPOG module imports are inline in the original headers
 // (their bodies come from the kernel itself); everything else is an import.
 
+// Inside TKernelInterface.dll (TOSHI_KERNEL_BUILD) these classes are exported as a whole, so the compiler
+// also emits the members that are written inline in the class body. Every other module sees plain inline code.
+#ifdef TOSHI_KERNEL_BUILD
+#define TOSHI_EXPORT __declspec(dllexport)
+#else
+#define TOSHI_EXPORT
+#endif
+
 namespace Toshi {
 
 class TVector2;
@@ -287,8 +295,8 @@ public:
     TOSHI_API TVector4& AsVector4();
     TOSHI_API void GetVectorDirection(TVector3&) const;
     TOSHI_API void Slerp(const TQuaternion&, float);
-    TOSHI_API void SetInverse();
-    TOSHI_API void SetConjugate();
+    TOSHI_EXPORT void SetInverse() { AsVector4().Negate3(); }
+    TOSHI_EXPORT void SetConjugate() { AsVector4().Negate3(); }
     TOSHI_API void Normalise();
     TOSHI_API float Magnitude() const;
     TOSHI_API float MagnitudeSq() const;
@@ -337,19 +345,12 @@ public:
     float x, y, z, w;
 };
 
-class TPlane
+class TOSHI_EXPORT TPlane
 {
 public:
-    // No JPOG module imports any TPlane member: all inline in the original header (copy is implicit).
-    enum PlaneComparison { };
-    TPlane() {}
-    TPlane(float x, float y, float z, float d) { m_oPlane.Set(x, y, z, d); }
-    TPlane(const TVector4& v) { m_oPlane = v; }
-    TPlane(const TVector3& n, float d) { m_oPlane.Set(n.x, n.y, n.z, d); }
-    void Set(float x, float y, float z, float d) { m_oPlane.Set(x, y, z, d); }
-    void Set(const TVector4& v) { m_oPlane = v; }
-    void Set(const TVector3& n, float d) { m_oPlane.Set(n.x, n.y, n.z, d); }
-    void Set(const TPlane& p) { m_oPlane = p.m_oPlane; }
+    // Return values of ComparePlane; the names are invented, the values are the constants in the binary.
+    enum PlaneComparison { PLANE_NEGATIVE = -1, PLANE_CROSSING = 0, PLANE_POSITIVE = 1 };
+    // Accessors first: the inline constructors and Set below inline them, as in the original.
     void SetD(float d) { m_oPlane.w = d; }
     float GetD() const { return m_oPlane.w; }
     void SetNormal(float x, float y, float z) { m_oPlane.x = x; m_oPlane.y = y; m_oPlane.z = z; }
@@ -359,6 +360,20 @@ public:
     TVector3& AsNormal() { return *(TVector3*)&m_oPlane; }
     const TVector4& AsVector4() const { return m_oPlane; }
     TVector4& AsVector4() { return m_oPlane; }
+    TPlane() {}
+    TPlane(float x, float y, float z, float d) { m_oPlane.Set(x, y, z, d); }
+    TPlane(const TVector4& v) { m_oPlane = v; }
+    TPlane(const TVector3& n, float d) { SetNormal(n); SetD(d); }
+    TOSHI_API TPlane(const TVector3& n, const TVector3& point);
+    void Set(float x, float y, float z, float d) { m_oPlane.Set(x, y, z, d); }
+    void Set(const TVector4& v) { m_oPlane = v; }
+    void Set(const TVector3& n, float d) { SetNormal(n); SetD(d); }
+    TOSHI_API void Set(const TVector3& n, const TVector3& point);
+    void Set(const TPlane& p) { m_oPlane = p.m_oPlane; }
+    TOSHI_API void Negate();
+    TOSHI_API void Negate(const TPlane& p);
+    TOSHI_API void SetPoint(const TVector3& point);     // d = normal . point
+    TOSHI_API void GetPoint(TVector3& point) const;     // point = normal * d
 
     TVector4 m_oPlane;          // normal xyz, distance w
 };
@@ -373,19 +388,20 @@ public:
     TSphere(const TVector4& v) { m_oSphere = v; }
     TSphere(const TVector3& c, float r) { m_oSphere.Set(c.x, c.y, c.z, r); }
     TSphere(float x, float y, float z, float r) { m_oSphere.Set(x, y, z, r); }
-    void Set(const TSphere& s) { m_oSphere = s.m_oSphere; }
-    void Set(const TVector4& v) { m_oSphere = v; }
-    void Set(const TVector3& c, float r) { m_oSphere.Set(c.x, c.y, c.z, r); }
-    void Set(float x, float y, float z, float r) { m_oSphere.Set(x, y, z, r); }
-    const TVector4& AsVector4() const { return m_oSphere; }
-    TVector4& AsVector4() { return m_oSphere; }
+    // The kernel exports exactly these inline members (see TSphere.cpp).
+    TOSHI_EXPORT void Set(const TSphere& s) { m_oSphere = s.m_oSphere; }
+    TOSHI_EXPORT void Set(const TVector4& v) { m_oSphere = v; }
+    TOSHI_EXPORT void Set(const TVector3& c, float r) { *(TVector3*)&m_oSphere = c; m_oSphere.w = r; }
+    TOSHI_EXPORT void Set(float x, float y, float z, float r) { m_oSphere.Set(x, y, z, r); }
+    TOSHI_EXPORT const TVector4& AsVector4() const { return m_oSphere; }
+    TOSHI_EXPORT TVector4& AsVector4() { return m_oSphere; }
     const TVector3& GetOrigin() const { return *(const TVector3*)&m_oSphere; }
     float GetRadius() const { return m_oSphere.w; }
 
     TVector4 m_oSphere;         // origin xyz, radius w
 };
 
-class TAABox
+class TOSHI_EXPORT TAABox
 {
 public:
     TOSHI_API TPlane::PlaneComparison ComparePlane(TPlane&);
@@ -400,10 +416,10 @@ public:
     TOSHI_API TAABox(const TAABox&);
     TOSHI_API TAABox(const float&, const float&, const float&, const float&, const float&, const float&);
     // imported inline: TDImp::BoneSpaceTransform builds one in place
-    TOSHI_API TAABox(const TVector3& a, const TVector3& b) : m_oMin(a), m_oMax(b) {}
+    TOSHI_API TAABox(const TVector3& centre, const TVector3& bounds) : m_oCentre(centre), m_oBounds(bounds) {}
 public:
-    TVector3 m_oMin;
-    TVector3 m_oMax;            // (layout to verify)
+    TVector3 m_oCentre;         // +0x00 (SetCentre / GetCentre)
+    TVector3 m_oBounds;         // +0x0C (SetBounds / GetBounds)
 };
 
 class TMatrix44
@@ -470,31 +486,64 @@ public:
     TOSHI_API TMatrix44 operator+(const TMatrix44&) const;
     // operator= and the copy constructor are inline memberwise copies (implicit)
     TOSHI_API void DebugPrint(const char*) const;
-    TOSHI_API void SetBasisVector4(const int, TVector4&);
-    TOSHI_API void GetBasisVector4(int, TVector4&) const;
-    TOSHI_API const TVector4& AsBasisVector4(int) const;
-    TOSHI_API TVector4& AsBasisVector4(int);
-    TOSHI_API void SetBasisVector3(const int, TVector3&);
-    TOSHI_API void GetBasisVector3(int, TVector3&) const;
-    TOSHI_API const TVector3& AsBasisVector3(int) const;
-    TOSHI_API TVector3& AsBasisVector3(int);
-    TOSHI_API void Set(float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float);
-    TOSHI_API bool operator!=(const TMatrix44&) const;
-    TOSHI_API bool operator==(const TMatrix44&) const;
-    TOSHI_API TMatrix44& operator/=(float);
-    TOSHI_API TMatrix44& operator*=(float);
-    TOSHI_API TMatrix44& operator*=(const TMatrix44&);
-    TOSHI_API TMatrix44& operator-=(const TMatrix44&);
-    TOSHI_API TMatrix44& operator+=(const TMatrix44&);
-    TOSHI_API const float& operator()(unsigned int, unsigned int) const;
-    TOSHI_API float& operator()(unsigned int, unsigned int);
-    TMatrix44(float f11, float f12, float f13, float f14, float f21, float f22, float f23, float f24,
-              float f31, float f32, float f33, float f34, float f41, float f42, float f43, float f44)
+    // Row 'index' of the matrix (4 floats per row).
+    TOSHI_API const TVector4& AsBasisVector4(int index) const { return ((const TVector4*)&m_f11)[index]; }
+    TOSHI_API TVector4& AsBasisVector4(int index) { return ((TVector4*)&m_f11)[index]; }
+    // The first three floats of row 'index'.
+    TOSHI_API const TVector3& AsBasisVector3(int index) const { return *(const TVector3*)(&m_f11 + index * 4); }
+    TOSHI_API TVector3& AsBasisVector3(int index) { return *(TVector3*)(&m_f11 + index * 4); }
+    TOSHI_API void SetBasisVector4(int index, const TVector4& v)
+    {
+        TVector4& d = AsBasisVector4(index);
+        d.x = v.x;
+        d.y = v.y;
+        d.z = v.z;
+        d.w = v.w;
+    }
+    TOSHI_API void GetBasisVector4(int index, TVector4& v) const
+    {
+        const TVector4& s = AsBasisVector4(index);
+        v.x = s.x;
+        v.y = s.y;
+        v.z = s.z;
+        v.w = s.w;
+    }
+    TOSHI_API void SetBasisVector3(int index, const TVector3& v)
+    {
+        TVector3& d = AsBasisVector3(index);
+        d.x = v.x;
+        d.y = v.y;
+        d.z = v.z;
+    }
+    TOSHI_API void GetBasisVector3(int index, TVector3& v) const
+    {
+        const TVector3& s = AsBasisVector3(index);
+        v.x = s.x;
+        v.y = s.y;
+        v.z = s.z;
+    }
+    TOSHI_API void Set(float f11, float f12, float f13, float f14, float f21, float f22, float f23, float f24,
+                       float f31, float f32, float f33, float f34, float f41, float f42, float f43, float f44)
     {
         m_f11 = f11; m_f12 = f12; m_f13 = f13; m_f14 = f14;
         m_f21 = f21; m_f22 = f22; m_f23 = f23; m_f24 = f24;
         m_f31 = f31; m_f32 = f32; m_f33 = f33; m_f34 = f34;
         m_f41 = f41; m_f42 = f42; m_f43 = f43; m_f44 = f44;
+    }
+    TOSHI_API bool operator!=(const TMatrix44& other) const { return !IsEqual(other); }
+    TOSHI_API bool operator==(const TMatrix44& other) const { return IsEqual(other); }
+    TOSHI_API TMatrix44& operator/=(float s) { Divide(s); return *this; }
+    TOSHI_API TMatrix44& operator*=(float s) { Multiply(s); return *this; }
+    TOSHI_API TMatrix44& operator*=(const TMatrix44& m) { Multiply(m); return *this; }
+    TOSHI_API TMatrix44& operator-=(const TMatrix44& m) { Subtract(m); return *this; }
+    TOSHI_API TMatrix44& operator+=(const TMatrix44& m) { Add(m); return *this; }
+    TOSHI_API const float& operator()(unsigned int row, unsigned int col) const { return (&m_f11)[row * 4 + col]; }
+    TOSHI_API float& operator()(unsigned int row, unsigned int col) { return (&m_f11)[row * 4 + col]; }
+    // The original calls the out-of-line Set from here.
+    TMatrix44(float f11, float f12, float f13, float f14, float f21, float f22, float f23, float f24,
+              float f31, float f32, float f33, float f34, float f41, float f42, float f43, float f44)
+    {
+        Set(f11, f12, f13, f14, f21, f22, f23, f24, f31, f32, f33, f34, f41, f42, f43, f44);
     }
 
     TMatrix44() {}

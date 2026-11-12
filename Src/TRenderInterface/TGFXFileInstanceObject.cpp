@@ -45,9 +45,14 @@ public:
     virtual int SetTextureAlphas(int a0, int a1, int a2, int a3) = 0;   // slot 37
     virtual void RestoreTextureAlphas(int alphas) = 0;                  // slot 38
 
-    int   TextureStagesState() { return *(int*)((char*)this + 0x30); }
-    void  SetTextureStagesState(int state) { *(int*)((char*)this + 0x30) = state; }
-    float& Alpha() { return *(float*)((char*)this + 0x38); }
+    int   TextureStagesState() { return m_iTextureStagesState; }
+    void  SetTextureStagesState(int state) { m_iTextureStagesState = state; }
+    float& Alpha() { return m_fAlpha; }
+
+    // TShader ends at 0x30; the members below are the platform shader's own
+    /* 0x30 */ int   m_iTextureStagesState;
+    /* 0x34 */ int   m_unk34;
+    /* 0x38 */ float m_fAlpha;
 };
 
 bool TGFXFileInstanceObject::sm_bForceLowLOD;                           // 0x1002c9c0

@@ -317,7 +317,7 @@ public:
     void RemoveAnimation(float speed);
     float SetWeight(float weight);
     ~TAnimation();
-    TAnimation();
+    TAnimation() {}
     float GetSpeed();
     float GetSeqTime();
     float GetTotalTime();
@@ -401,7 +401,7 @@ public:
     TAnimation* AddAnimation(short sequence, float weight, float blendin);
     void Delete();
     ~TSkeletonInstance();
-    TSkeletonInstance();
+    TSkeletonInstance() {}
     TSkeletonInstanceBone* GetBone(int index);
     TSkeletonInstanceBone* GetBones();
     unsigned int GetSize() const;

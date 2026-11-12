@@ -49,11 +49,34 @@ public:
     ~TLString();
     TLString& operator=(const TLString& o);
     bool IsNull() const { return m_pData == 0; }
-    const TWString& GetWString() const { return m_pData ? m_pData->m_oString.GetWString() : ms_wsEmpty; }
-    bool IsEmpty() const { return GetWString().IsEmpty(); }
+    // The kernel exports operator*, operator-> and operator const TWString* (??D / ??C / ??B) and
+    // GetLocalisedString with this same body: an empty string when there is no data.
+    const TWString& operator*() const
+    {
+        if (!m_pData) return ms_wsEmpty;
+        return *m_pData->m_oString;
+    }
+    const TWString* operator->() const
+    {
+        if (!m_pData) return &ms_wsEmpty;
+        return m_pData->m_oString;
+    }
+    operator const TWString*() const
+    {
+        if (!m_pData) return &ms_wsEmpty;
+        return m_pData->m_oString;
+    }
+    const TWString& GetLocalisedString() const
+    {
+        if (!m_pData) return ms_wsEmpty;
+        return *m_pData->m_oString;
+    }
     bool IsTemporary() const { return m_pData ? m_pData->IsTemporary() : false; }
-    const TWString& GetLocalisedString() const { return GetWString(); }
-    const TCString& GetIdentifierString() const { return m_pData ? m_pData->m_oIdentifier.GetCString() : ms_csEmpty; }
+    const TCString& GetIdentifierString() const
+    {
+        if (!m_pData) return ms_csEmpty;
+        return *m_pData->m_oIdentifier;
+    }
     int GetIndex() const { return m_pData->m_iIndex; }
     bool operator==(const TLString& o) const { return m_pData == o.m_pData; }
 

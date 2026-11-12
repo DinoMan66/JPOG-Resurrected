@@ -10,7 +10,7 @@ class TRENDER_API TRenderCapture
 {
 public:
     TRenderCapture();
-    virtual ~TRenderCapture();                                          // slot 0
+    virtual ~TRenderCapture() {}                                        // slot 0
 
     virtual bool Create() = 0;                                          // slots 1-7 (names unknown)
     virtual void Destroy() = 0;

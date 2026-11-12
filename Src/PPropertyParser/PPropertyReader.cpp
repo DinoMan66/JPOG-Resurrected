@@ -143,7 +143,7 @@ bool PPropertyReader::Load(const TCString& fileName, PProperties& properties)  /
 
 PProperties* PPropertyReader::LoadPropertyBlock()                         // 0x39d0
 {
-    bool eof = m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_EOF;
+    bool eof = (m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_EOF) ? true : false;
     if (eof)
         return 0;
     PProperties* properties = new PProperties();
@@ -155,7 +155,7 @@ PProperties* PPropertyReader::LoadPropertyBlock()                         // 0x3
 
 bool PPropertyReader::LoadPropertyBlock(PProperties& properties)          // 0x3a70
 {
-    bool eof = m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_EOF;
+    bool eof = (m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_EOF) ? true : false;
     if (eof)
         return false;
     m_oBlockLines.Clear();
@@ -380,7 +380,7 @@ bool PPropertyReader::GetValue(PPropertyValue& value)                     // 0x4
         m_pLexer->GetNextToken();
         for (;;)
         {
-            bool close = m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_CLOSEBRACE;
+            bool close = (m_pLexer->PeekNextToken(0).GetType() == TFileLexer::TOKEN_CLOSEBRACE) ? true : false;
             if (close)
             {
                 m_pLexer->GetNextToken();
@@ -418,7 +418,7 @@ bool PPropertyReader::GetValue(PPropertyValue& value)                     // 0x4
     }
     else
     {
-        bool reference = m_pLexer->PeekNextToken(1).GetType() == TFileLexer::TOKEN_OPENSQR;
+        bool reference = (m_pLexer->PeekNextToken(1).GetType() == TFileLexer::TOKEN_OPENSQR) ? true : false;
         if (reference)
         {
             TPCString name;
