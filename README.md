@@ -4,8 +4,8 @@ A work-in-progress **matching decompilation** of *Jurassic Park: Operation Genes
 Entertainment / Universal Interactive) for PC: the Toshi engine DLLs and the game itself, `SimJP.exe`.
 
 Hello everyone. This is my first decompilation project. While ZT1 Open Source was published first, I started game decompilation here, with Jurassic Park Operation Genesis, one of my favorite games ever. I'm new to the decompilation scene and am still trying to improve my set up. Bear with me while I get the hang of things.
-The reason why I've named this decompilation JPOG Revival is because I hope to revive this classic game and get it running on modern systems, implement several new features, and add back cut content.
-Has nothing to do with the JPOG Revival series of mods for Jurassic World Evolution 3.
+The reason why I've named this decompilation JPOG Revival is because I hope to revive this classic game and get it running on modern systems, implement several new features, and add back cut content. I'm aware that it may not be possible for me to fully decompile JPOG since the compiler it was built with was of a different build to the one that I'm using (JPOG was compiled with build 020125Z, the compiler I'm using is build 010525Z), but I intend to do eveything I can to decompile the game into human readable source code. I'll consider the project finished once I've used up every option I've got to make a matching decompilation of JPOG.
+*Has nothing to do with the JPOG Revival series of mods for Jurassic World Evolution 3.
 
 The goal is readable C++ source that, compiled with Intel C++ 5.0.1, produces **the same machine code as the
 original, function by function**. A function only counts when it compiles to identical instructions *and*
@@ -17,13 +17,18 @@ every call, global and string it references points to the same target as in the 
 ## Status
 
 Progress is measured by an independent verification tool, never by hand
-(see [`Notes/VERIFIED_PROGRESS.md`](Notes/VERIFIED_PROGRESS.md)). As of 2026-10-29:
+(details: [`Notes/VERIFIED_PROGRESS.md`](Notes/VERIFIED_PROGRESS.md)).
+The table below is rewritten by that tool after every session.
+
+<!-- status:start -->
+Verified by the independent checker on 2026-11-11 (tools intact: yes, rule violations: 0). Only the first row counts as reconstruction.
 
 | | Functions | Share of 20,432 |
 |---|---:|---:|
-| Readable reconstruction (matched, real names) | 1,895 | 9.3% |
-| Matched, honest placeholder names | 0 | 0% |
-| Not yet matching (attempted) | 331 | 1.6% |
+| Readable reconstruction (matched, real names) | 2,454 | 12.0% |
+| Matched, honest placeholder names (to be documented) | 0 | 0.0% |
+| Written but not matching yet | 272 | 1.3% |
+<!-- status:end -->
 
 The 20,432 functions cover all 18 DLLs (6,768 functions) **and** `SimJP.exe` (13,664 functions);
 the full list is in [`Notes/function_tracker.csv`](Notes/function_tracker.csv).
@@ -94,17 +99,16 @@ These take different approaches and complement this one:
 - [AdventureT/OpenJPOG](https://github.com/AdventureT/OpenJPOG) — decompilation of the Toshi engine and JPOG
 - [Voikanaa/jpog-decomp](https://github.com/Voikanaa/jpog-decomp) — portable C++20 reimplementation, tested against the original DLLs
 
-## Credits
-
-I would like to give a big thanks to bwrsandman for finding Intel C++ Compiler Version 5.0.1 Build 010525Z. I wouldn't have been able to get this project off the ground without him finding the compiler I'm using. It isn't 020125Z unfortunately (the compiler build Jurassic Park Operation Genesis was built with), but so far I have a match rate of ~%90. So long as I'm unable to find build 020125Z I won't be able to match all functions, but I can get pretty close.
-OpenToshi, OpenJPOG, and OpenBarnyard were also used as reference materials.
-
 ## Legal
 
 This project contains only original source written to reproduce the game's behaviour, plus tools and notes.
 It contains no copyrighted game files, and none are distributed. Jurassic Park is a trademark of Universal
 City Studios and Amblin Entertainment. This project is non-commercial.
 
+## Credits
+
+The projects, articles and tools this setup learned from are listed in [CREDITS.md](CREDITS.md).
+
 ## License
 
-CC0 1.0 Universal. You can do anything you want with the source code, no strings attached. I'd still like it if you'd credit me should you use it for something. Not a requirement, of course.
+[CC0 1.0 Universal](LICENSE). You can do anything you want with the source code, no strings attached. I'd still like it if you'd credit me should you use it for something. Not a requirement, of course.
