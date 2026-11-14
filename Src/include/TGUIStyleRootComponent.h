@@ -1,6 +1,6 @@
 // Toshi::TGUIStyleRootComponent - root of a GUI style: the list of its states and the margins around
 // them (TGuiInterface.dll). The destructor is the compiler-generated one and deletes the states.
-// FindState, CreateState, operator=, DeserialiseStates and SerialiseStates are still to do.
+// operator=, DeserialiseStates and SerialiseStates are still to do.
 #ifndef TGUISTYLEROOTCOMPONENT_H
 #define TGUISTYLEROOTCOMPONENT_H
 #include "TGUIAPI.h"
@@ -16,6 +16,8 @@ public:
 
     void AddState(TGUIStyleState* state);
     TNodeList<TGUIStyleState>& GetStates();
+    TGUIStyleState* FindState(const TGUIStateRule& rule);
+    TGUIStyleState* CreateState(const TGUIStateRule& rule);
 
     void GetMargins(int& left, int& right, int& top, int& bottom);
     void SetMargins(int left, int right, int top, int bottom);

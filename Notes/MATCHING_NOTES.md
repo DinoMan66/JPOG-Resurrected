@@ -316,3 +316,52 @@ scoreall: 22 at round 192 -> 219 at round 207 (903 not written yet). One header 
   inlines (#23). They are listed in NOT_MATCHING.md; only a translation-unit split would hide the body from our compiler.
 - TRandom::GetInt(int, int): the original's ebp frame, every value in a stack slot and `mul dword ptr [local]` are
   what this compiler emits for a function containing inline assembly. Left as a mismatch (no `__asm`, user decision).
+
+## Kernel files, tasks and lexer (rounds 361-382, 2026-11-13)
+- `<windows.h>` defines `CreateFile` as `CreateFileA`, which renamed the exported `...::CreateFile` methods in every file that
+  includes it. `#undef CreateFile` right after the include in TKernelThreads.h / TKernelDLL.h; Win32 calls use `CreateFileA`.
+- `new T(this)` in the CreateFile functions is the kernel's inline operator new (tmalloc + null test); placement new on
+  tmalloc memory gives a different branch layout. Include TNewDelete.h, write `new T(this)` and `delete file` on failure
+  (a virtual scalar-deleting-destructor call, so the virtual destructor is the last slot).
+- Constructors of the file classes live in their own TUs (TNativeFileCtor.cpp, TNullFileCtor.cpp, TMemFileCtor.cpp,
+  TISOFileCtor.cpp), otherwise ICC inlines them into CreateFile. TISOFile's empty destructor is out of line next to its ctor.
+- Buffered Read (TNativeFile / TISOFile): the original ends `if (total != size) { if (!LoadBuffer(block)) return total; ...copy }
+  return total;`. The reversed form `if (total == size) return total;` lets ICC reuse the loaded register and shortens the code by
+  4 bytes. Same fix matched both functions.
+- `min(a, b)` over two address-taken locals forces both into stack slots: the shared `Min(const T&, const T&)` template in
+  TKernelMisc.h reproduces the original's `lea edx,[esp+4]` selection.
+- Float members are zeroed with `= 0.0f` (immediate store); an int zero would be CSE'd into `xor reg` (TTimer +0x40).
+- `return (flags & 4) != 0;` and `if (flags & 4) return true; return false;` generate different code: TTask flag accessors
+  use the if/return form.
+- Uploaded Src copies in the session container go stale: stage the device copy of a file before editing it, or earlier edits
+  are dropped (round 369 lost ISO9660PVD and ~TRandom that way).
+- Open: TScheduler::SetDebugSlowTime keeps 0.01f / 1.0f in a register and stores once (`mov eax,imm / jmp / store`); the plain
+  `slow ? 0.01f : 1.0f` and an if/else both store the immediate in each branch. A named temporary matches but is an added
+  construct, so it is not committed (the original probably went through a helper).
+
+
+## PGUICore start, accessor-only classes (rounds 388-400, 2026-11-13)
+- Accessor-only classes compile fine with offset-named placeholder bytes (`unsigned char m_unk00[0x10]`) for the unknown prefix; no vtable is needed when only non-virtual accessors are written. Derived layout classes only need the base header (TGUILayoutManager).
+- A TNodeList<T> member needs T complete where the implicit destructor is instantiated: include the header of T in the class header (TGUIFont.h includes TGUITextureSection.h) or the TU fails with 'pointer to incomplete class'.
+- Headers in Src\TKernelInterface (TKernelEmitter.h, TKernelThreads.h) are not on the include path of other DLL folders; only Src\include is shared.
+- A commit of sources and request.txt in the same device_commit_files call can build the old files (r393/394 saw the stale TGUIWidgetAction header): commit the sources first, the request in a later call.
+- An implicit dtor/ctor/operator= in a new exported class shows up as a DIFF in scoreall (TGUIFont ctor/dtor, PGUIDiscLayout dtor): the originals are user-written; do not chase them without the body.
+
+
+## PGUICore, widget lists and menu classes (rounds 401-462, 2026-11-13)
+- TNode/TNodeList offsets: for PGUIItemData/RowData/TGUIWidget the TNode sits at +4 (m_pList +4, next +8, prev +0xC); a list member at +X has its end sentinel at +X-4, head at +X+4, tail at +X+8, count at +X+0xC (`End()` is root-4 as a T*).
+- Iterator construction order decides registers: declare begin first, then end, then the other iterator (`it(Begin); end(End); [other]`). Dual-list scans (FindItemWidget/FindWidgetItem) are `for (; a != aEnd && b != bEnd; ++a, ++b)`.
+- Walking N siblings: a `for (i < n) ++it;` with the null-guarded Iterator matches (MenuTree::InvokeMenu); FindChildItem needs `while (index > 0 && it != end)`, the `for` form is a shrink-wrap DIFF.
+- Style properties whose setter calls an out-of-line `SetListItemStyle(TGUIStyle*)` go into their own TU (PGUIListBoxStyles.cpp), otherwise ICC inlines the setter; Get_ uses `PPropertyValue(m_pStyle ? m_pStyle->GetName() : TPCString())`.
+- Factory statics are decorated by access: the original `CreateObject` of an abstract PGUI class is `private static` (mangled `C`); `public` gives `S`, `protected` `K` and the symbol is not matched.
+- Adding a TNodeList member to a class whose ctor/dtor are not written makes ICC emit implicit ctor/dtor that are then scored and FILED (MenuBar, MenuDialog dtors). Expect those open diffs; do not chase them.
+- Header inline `SetState(mask, value)` is what the original inlined into PropagateState: moving it into PGUIItemData.h kept every other match.
+- InsertTail inline: the original hoists both `lea` instructions before the first store (ListBox/TableBox AddItemImpl, MenuTreeItem::AddItem, DiscardButton, DiscardDialog): sched wall, same family.
+- TGUIWidget vtable: slot 33 (+0x84) = Pack, slot 34 (+0x88) = Layout(-1,-1); TGUIWidget.h lacks slots 34+, so Layout/Paint/UpdateSelection-style functions are not written yet. A copy ctor + Clone needs TGUI_API TGUINew (dllimport).
+- Growing a base member list shifts the placeholders of derived classes: re-check every derived m_unkXX offset comment after changing TGUIWidget.h.
+- Tooling: commit sources first, then request.txt in a separate call, and always use a new staged file name per commit (the bridge can serve a cached same-named file).
+- Overloaded virtuals take their vtable slots in REVERSE declaration order in ICC (TTextureResource::Create(const char*,...) = +0x3c, Create(void*,...) = +0x38 only when the const char* overload is declared first); check the vtable offset in the original caller before ordering overloads.
+- Original `if (p) { if (p) p->Release(); p = 0; }` (second null test kept by ICC) = the DirectX sample SAFE_RELEASE macro followed by `p = 0`: TRenderD3DInterface::DestroyDisplay and both block DestroyHAL functions. Statement macro in d3d8min.h with an `// original macro:` comment.
+- A small private or class-accessor function defined in the same TU is inlined by our ICC build even when the original calls it out of line (TMSWindow::Destroy -> GetHWND/Disable, CreateAcceleratorTableA -> DestroyAcceleratorTable); reordering the definitions did not change that. Family of open diffs, not a source error.
+- Header inline accessor with `if (flags & X) return true; return false;` (TModel::IsLoaded) must be defined in the class body: the original inlines it into TModelD3D::Load (mov al,1 / xor al,al then cmp al,1).
+- Friend access: TTextureResource lists TTextureFactory as friend; TTextureFactoryHAL needs its own `friend class` to call the protected Create(const char*, flags) (friendship is not inherited).

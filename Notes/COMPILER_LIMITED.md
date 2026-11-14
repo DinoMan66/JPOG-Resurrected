@@ -134,3 +134,54 @@ above on 2026-10-28 were counted as a second attempt because the header change a
 | TKernelInterface.dll | TGenericFifo::Pop | 0x7c70 | regalloc | `push   ebp` / `push   esi` | 2026-11-03 |
 | PPropertyParser.dll | PPropertyWriter::Put | 0x8890 | regalloc | `push   esi` / `push   edi` | 2026-11-03 |
 | TKernelInterface.dll | TRandom::Isaac | 0x24370 | regalloc | `mov    ebp,ecx` / `mov    esi,ecx` | 2026-11-03 |
+| TKernelInterface.dll | TMatrix44::MatToQuat | 0x1c780 | sched | `fld    dword ptr [edx+0x14]` / `fld    dword ptr [edx]` | 2026-11-12 |
+| TKernelInterface.dll | TMath::TruncToInt | 0x19030 | shrink-wrap | `push   esi` / `fld    dword ptr [esp+0x4]` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::ValidatePropertyInfo | 0x1d420 | regalloc | `push   esi` / `push   edi` | 2026-11-12 |
+| TGuiInterface.dll | TGUIStyleRootComponent::FindState | 0x15c40 | regalloc | `push   edi` / `push   esi` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::GetPropertyCount | 0x20e10 | sched | `movzx  eax,byte ptr [eax+0x20]` / `mov    edx,dword ptr [ecx+0x38]` | 2026-11-12 |
+| TGuiInterface.dll | TGUIStyle::IsCompatibleWith | 0x177d0 | regalloc | `push   esi` / `push   ebx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::Get_state_property | 0x20a40 | regalloc | `mov    edx,dword ptr [esp+0x4]` / `mov    ecx,dword ptr [esp+0x4]` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::TransformDeviceToWidget | 0x1e3c0 | shrink-wrap | `sub    esp,0x8` / `push   ebx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::TransformWidgetToDevice | 0x1e410 | shrink-wrap | `sub    esp,0x8` / `push   ebx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIElement::ctor | 0x28660 | shrink-wrap | `push   esi` / `mov    edi,ecx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::Val_width_property | 0x1da30 | regalloc | `push   esi` / `push   ebx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWidget::Val_height_property | 0x1daa0 | regalloc | `push   esi` / `push   ebx` | 2026-11-12 |
+| TGuiInterface.dll | TGUIWindow::Val_default_focus_property | 0x22710 | regalloc | `push   esi` / `push   ebp` | 2026-11-12 |
+| TGuiInterface.dll | TGUITextureSection::Assign | 0x1ae30 | regalloc | `push   ebp` / `push   edi` | 2026-11-12 |
+| TKernelInterface.dll | Token::ctor | 0xf0a0 | regalloc | `push   ebx` / `push   edi` | 2026-11-13 |
+| TKernelInterface.dll | Token::ctor | 0x12190 | regalloc | `push   ebx` / `push   edi` | 2026-11-13 |
+| TKernelInterface.dll | TProfiler::Stop | 0x21e50 | sched | `mov    eax,dword ptr [esp]` / `mov    edi,dword ptr [esi+0x58]` | 2026-11-13 |
+| TKernelInterface.dll | TLString::dtor | 0x18b60 | regalloc | `push   esi` / `push   edi` | 2026-11-13 |
+| TKernelInterface.dll | TCStringPool::Get | 0x20670 | regalloc | `push   ebp` / `push   ebx` | 2026-11-13 |
+| TKernelInterface.dll | TCStringPool::GetOptional | 0x20770 | regalloc | `push   ebp` / `push   ebx` | 2026-11-13 |
+| TKernelInterface.dll | TCStringPool::IsPresent | 0x20820 | regalloc | `push   ebp` / `push   esi` | 2026-11-13 |
+| TKernelInterface.dll | TCStringPool::GetVolatile | 0x208c0 | regalloc | `push   ebp` / `push   ebx` | 2026-11-13 |
+| TKernelInterface.dll | TWStringPool::Get | 0x22c00 | regalloc | `push   ebp` / `push   ebx` | 2026-11-13 |
+| TKernelInterface.dll | TWStringPool::GetVolatile | 0x22ca0 | regalloc | `push   ebp` / `push   ebx` | 2026-11-13 |
+| TKernelInterface.dll | TTimer::OnUpdate | 0x263a0 | shrink-wrap | `sub    esp,0x44` / `push   edi` | 2026-11-13 |
+| PGUICore.dll | PGUITableBox::ctor | 0x18d90 | regalloc | `push   edi` / `push   ebp` | 2026-11-13 |
+| PGUICore.dll | PGUITableBox::dtor | 0x18e40 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| PGUICore.dll | PGUIDialog::Pack | 0x4a00 | shrink-wrap | `push   esi` / `mov    edi,ecx` | 2026-11-13 |
+| PGUICore.dll | PGUILabel::Pack | 0x8260 | shrink-wrap | `push   esi` / `mov    edi,ecx` | 2026-11-13 |
+| PGUICore.dll | PGUIListItem::Pack | 0xce40 | shrink-wrap | `push   esi` / `mov    edi,ecx` | 2026-11-13 |
+| PGUICore.dll | PGUIPushButton::Pack | 0x134a0 | shrink-wrap | `push   esi` / `mov    edi,ecx` | 2026-11-13 |
+| PGUICore.dll | PGUIHorizontalSplit::Val_stretchtop_property | 0x70a0 | regalloc | `push   edi` / `push   ebp` | 2026-11-13 |
+| PGUICore.dll | PGUIVerticalSplit::Val_stretchleft_property | 0x1d120 | regalloc | `push   edi` / `push   ebp` | 2026-11-13 |
+| PGUICore.dll | PGUIGridLayout::Val_columns_property | 0x21a30 | regalloc | `push   ebp` / `push   edi` | 2026-11-13 |
+| PGUICore.dll | PGUILayoutManager::Val_padx_property | 0x230b0 | regalloc | `push   ebp` / `push   edi` | 2026-11-13 |
+| PGUICore.dll | PGUILayoutManager::Val_pady_property | 0x230f0 | regalloc | `push   ebp` / `push   edi` | 2026-11-13 |
+| PGUICore.dll | PGUIMenuDialog::Pack | 0xe640 | sched | `movsx  edx,word ptr [edi+0x70]` / `xor    ecx,ecx` | 2026-11-13 |
+| PGUICore.dll | PGUIDiscMenuDialog::dtor | 0x5b70 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| PGUICore.dll | PGUIMenuBar::dtor | 0xde30 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| PGUICore.dll | PGUIMenuDialog::dtor | 0xf600 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| TKernelInterface.dll | TLString::operator= | 0x18b20 | regalloc | `push   esi` / `push   edi` | 2026-11-13 |
+| TKernelInterface.dll | TLocalisedString::Delete | 0x17970 | regalloc | `push   esi` / `push   edi` | 2026-11-13 |
+| TKernelInterface.dll | TScheduler::ctor | 0x24b80 | sched | `mov    dword ptr [ebp+0x0],0x0` / `xor    eax,eax` | 2026-11-13 |
+| PGUICore.dll | PGUIMenuTree::ctor | 0xff50 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| PGUICore.dll | PGUIListBox::ctor | 0x9be0 | regalloc | `lea    ecx,[ebx+0xc4]` / `lea    ecx,[ebx+0x8c]` | 2026-11-13 |
+| TGuiInterface.dll | TGUIFont::dtor | 0xbbf0 | regalloc | `push   ebx` / `push   esi` | 2026-11-13 |
+| TGuiInterface.dll | TGUIInterface::FindFont | 0x10bc0 | shrink-wrap | `push   edi` / `mov    edx,dword ptr [esp+0x4]` | 2026-11-13 |
+| TGuiInterface.dll | TGUIInterface::FindLayoutClass | 0x10a50 | shrink-wrap | `push   esi` / `mov    ecx,dword ptr [esp+0x4]` | 2026-11-13 |
+| TGuiInterface.dll | TGUIInterface::FindComponentClass | 0x10a90 | shrink-wrap | `push   esi` / `mov    ecx,dword ptr [esp+0x4]` | 2026-11-13 |
+| TRenderD3DInterface.dll | TRenderContextD3D::Update | 0x6ac0 | regalloc | `push   esi` / `push   ebp` | 2026-11-13 |
+| TRenderD3DInterface.dll | TRenderD3DInterface::Supports32BitTextures | 0x8630 | regalloc | `push   ebp` / `push   esi` | 2026-11-14 |

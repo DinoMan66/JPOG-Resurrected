@@ -13,8 +13,8 @@ class TGUI_API TGUIMemory
 
 // Allocation and release for GUI objects (components, ...): they come from the GUI's own memory pile
 // when it is enabled. TGUISetUseMemoryPile switches that on.
-void* __stdcall TGUINew(unsigned int size);
-void __stdcall TGUIDelete(void* memory);
+TGUI_API void* __stdcall TGUINew(unsigned int size);
+TGUI_API void __stdcall TGUIDelete(void* memory);
 
 } // namespace Toshi
 #endif

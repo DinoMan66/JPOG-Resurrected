@@ -2,7 +2,8 @@
 // abstract; PGUICore derives the disc, overlay, ... layouts from it. A layout manager is owned by the
 // widget it lays out (TGUIWidget::SetLayoutManager).
 // Vtable after TGUIDeserialisable: [11] GetPropertyInfoSet [12] GetPropertyInfoOrderedSet [13] Clone (pure)
-//         [14] DoPack (pure) [15] DoLayout (pure); the parameters of the last two are still unknown.
+//         [14] DoPack (pure) [15] DoLayout (pure); the names and parameter types come from the exports of
+//         PGUICore's layouts, what the two int references mean is not known yet.
 // Size 0xC.
 #ifndef TGUILAYOUTMANAGER_H
 #define TGUILAYOUTMANAGER_H
@@ -13,10 +14,12 @@ namespace Toshi {
 
 class TGUIInterface;
 class TGUILayoutInfo;
+class TGUIWidget;
 
 class TGUI_API TGUILayoutManager : public TGUIDeserialisable
 {
 public:
+    TGUILayoutManager();
     virtual ~TGUILayoutManager();
 
     virtual TClass& GetClass() const;                                       // slot 0
@@ -26,6 +29,8 @@ public:
     virtual TGUIInterface* GetInterface() const { return m_pInterface; }    // slot 10
 
 protected:
+    TGUILayoutManager(const TGUILayoutManager& other);
+
     virtual const TArray<TGUIPropertySpec*>* GetPropertyInfoSet() const { return ms_oPropertySet; }    // slot 11
     // slot 12
     virtual const TSortedArray<TGUIPropertySpec*, TGUIPropertySpec::Comparator>* GetPropertyInfoOrderedSet() const
@@ -35,8 +40,13 @@ protected:
 
 public:
     virtual TGUILayoutManager* Clone() const = 0;                           // slot 13
-    virtual void vf14() = 0;                                                // DoPack
-    virtual void vf15() = 0;                                                // DoLayout
+    virtual void DoPack(TGUIWidget* widget) const = 0;                      // slot 14
+    virtual void DoLayout(TGUIWidget* widget, int& arg1, int& arg2) const = 0;     // slot 15
+
+    // How a layout aligns a child inside its slot; the enumerator values are not known yet
+    enum Alignment
+    {
+    };
 
     const TGUILayoutInfo* GetLayoutInfo() const { return m_pLayoutInfo; }
 
@@ -54,6 +64,9 @@ protected:
 
 private:
     TGUIInterface* m_pInterface;        // +0x4
+
+protected:
+    // Each derived class's constructor points this at its own static layout info
     TGUILayoutInfo* m_pLayoutInfo;      // +0x8
 };
 

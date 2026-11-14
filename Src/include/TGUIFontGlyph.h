@@ -13,9 +13,10 @@ class TGUI_API TGUIFontGlyph : public TGUITextureSection
 {
 public:
     TGUIFontGlyph();
+    explicit TGUIFontGlyph(unsigned short character);
     virtual ~TGUIFontGlyph();
 
-    virtual TGUITextureSection* Clone() const;
+    virtual TGUIFontGlyph* Clone() const;
 
     void SetKerningRight(short kerning) { m_sKerningRight = kerning; }
     void SetKerningLeft(short kerning) { m_sKerningLeft = kerning; }

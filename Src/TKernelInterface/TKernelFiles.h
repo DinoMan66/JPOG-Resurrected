@@ -151,9 +151,17 @@ public:
 
 protected:
     TISOFile(TISOFileSystem* fileSystem);
+    virtual ~TISOFile();
+
+    bool Open(const TCString& path, unsigned int flags);
     void Close();
 
 private:
+    friend class TISOFileSystem;
+
+    int ReadUnbuffered(void* buffer, int size);
+    bool LoadBuffer(int offset);
+
     unsigned int m_uStart;          // +0x08
     int m_iSize;                    // +0x0C
     int m_iPos;                     // +0x10

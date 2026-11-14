@@ -184,4 +184,8 @@ float TRandom::GetFloatMinRange(float minimum, float range)
     return (float)(RandRaw() >> 1) * (1.0f / 2147483648.0f) * range + minimum;
 }
 
+TRandom::~TRandom()
+{
+}
+
 } // namespace Toshi

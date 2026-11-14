@@ -14,6 +14,11 @@ struct TGUIStateRule
     {
     }
 
+    bool operator==(const TGUIStateRule& other) const
+    {
+        return m_unk00 == other.m_unk00 && m_unk04 == other.m_unk04;
+    }
+
     /* 0x00 */ unsigned int m_unk00;
     /* 0x04 */ unsigned int m_unk04;
 };

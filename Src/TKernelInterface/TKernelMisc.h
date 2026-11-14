@@ -5,6 +5,12 @@
 
 namespace Toshi {
 
+template <class T>
+inline const T& Min(const T& a, const T& b)
+{
+    return a < b ? a : b;
+}
+
 class TVector2;
 class TVector3;
 
@@ -69,6 +75,16 @@ public:
     static void __stdcall NormaliseAngle(float& angle);
     static float __stdcall GetAngleDifference(float from, float to);
     static float __stdcall GetDirectedAngleDifference(float from, float to, bool positive);
+    static bool __stdcall SphereIntersection(const TVector3& centreA, float radiusA, const TVector3& centreB, float radiusB, float* distanceSqMinusRadiusSq, TVector3* offset, float* depth);
+    static bool __stdcall SphereIntersectionPlanar(const TVector3& centreA, float radiusA, const TVector3& centreB, float radiusB, float* distanceSqMinusRadiusSq, TVector3* offset, float* depth);
+    static bool __stdcall RaySegmentVsLine2D(const TVector2& rayOrigin, const TVector2& rayDirection, const TVector2& linePoint, const TVector2& lineDirection, float& t);
+    static void __stdcall CalculateCapsuleNormal2D(const TVector2& capsuleStart, const TVector2& capsuleEnd, const TVector2& point, TVector2& normal);
+    static bool __stdcall PointInsideCapsule2D(const TVector2& capsuleStart, const TVector2& capsuleEnd, float radius, const TVector2& point);
+    static int __stdcall RayVsCircle2D(const TVector2& rayOrigin, const TVector2& rayDirection, const TVector2& centre, float radius, float& t0, float& t1);
+    static int __stdcall RayVsCircle3D(const TVector3& rayOrigin, const TVector3& rayDirection, const TVector3& centre, float radius, float& t0, float& t1);
+    static bool __stdcall LineVsLine2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, float& s, float& t);
+    static bool __stdcall LineSegmentVsLineSegment2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, TVector2& hit);
+    static float __stdcall ClosestPointOnLineOverTime2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, float time);
     static void __stdcall SinCos(float angle, float& sine, float& cosine);
     static float __stdcall LERP(float a, float b, float t);
     static float __stdcall RadToDeg(float radians);
@@ -80,15 +96,23 @@ public:
 
 private:
     static float __stdcall Bias(float bias, float t);
+    static int __stdcall GetCapsuleZone(const TVector2& point, const TVector2& start, const TVector2& end, float radius);
 };
 
 typedef unsigned short TSysWChar;
 
 class TCString;
+class TCStringPool;
+class TWStringPool;
+class TLocale;
 
 // Local wall-clock time as returned by TSystem::GetLocalTime (month is the C runtime's 0-based value).
-struct TDateTime
+struct __declspec(dllexport) TDateTime
 {
+    // Packs the date as year/month/day and the time as hour/minute/second into two words and back.
+    void Pack(unsigned int& date, unsigned int& time);
+    void UnPack(unsigned int& date, unsigned int& time);
+
     unsigned short year;
     unsigned char month;
     unsigned char hour;
@@ -103,7 +127,7 @@ public:
     static bool __stdcall GetLocalTime(TDateTime& dateTime);
     static void __stdcall StringFormatDateTime(const TDateTime& dateTime, TCString& result);
     static TSysWChar* __stdcall GetTempWString();
-    static char* __stdcall GetTempCString();
+    static char* __stdcall GetTempCString() { return (char*)ms_aScratchMem; }
     static unsigned char* __stdcall GetScratchMem();
     static const char* __stdcall StringFindChar(const char* s, char c);
     static unsigned int __stdcall HashString(const char* s);
@@ -122,10 +146,22 @@ public:
     static int __stdcall StringCompare(const char* a, const char* b, int count);
     static const TSysWChar* __stdcall StringCharToUnicode(TSysWChar* dst, const char* src, int count);
     static const char* __stdcall StringUnicodeToChar(char* dst, const TSysWChar* src, int count);
+    static const char* __stdcall StringIntToString(int value, char* buffer, int radix);
     static void* __stdcall MemSet(void* dst, int value, int count);
     static void* __stdcall MemCopy(void* dst, const void* src, unsigned int count);
 
+    static TCStringPool* __stdcall CreateCStringPoolExplicit(int a, int b);
+    static TCStringPool* __stdcall CreateCStringPoolExplicit(const char* name, int a, int b);
+    static TCStringPool* __stdcall GetCStringPool();
+    static TLocale* __stdcall GetLocale();
+    static TWStringPool* __stdcall GetWStringPool();
+
     static unsigned char ms_aScratchMem[0x400];
+
+private:
+    static TLocale* ms_poLocale;
+    static TWStringPool* ms_poTWStringPool;
+    static TCStringPool* ms_poTCStringPool;
 };
 
 class __declspec(dllexport) TBitArray
@@ -152,6 +188,7 @@ class __declspec(dllexport) TRandom
 {
 public:
     TRandom();
+    ~TRandom();
     int GetInt();
     int GetInt(int range);
     int GetInt(int minimum, int maximum);

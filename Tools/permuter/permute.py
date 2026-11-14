@@ -19,6 +19,9 @@ Free tool (Tools\\TOOLS.md). Works in both projects (Zoo Tycoon / JPOG).
   --auto N    work through the N closest functions of --list unattended (each with --rounds/--batch; a function
               that turns out not to be a near miss is dropped after its first build; functions that already have a
               report are skipped unless --again). Summary: Notes\\permuter\\AUTO_<date>.md. Ctrl+C stops cleanly.
+              Notes\\PERMUTER_TARGETS.txt (written by a session: "<folder\\file.cpp> <Class::method> [sym]" per line;
+              sym = part of the decorated name, for overloads) is
+              run first; afterwards it is moved to Notes\\permuter\\PERMUTER_TARGETS_<date>.done.txt.
 
 What it does, each round: makes N copies of the file with small rewrites inside the function, puts them in a
 scratch folder Src\\zzperm\\, asks the VM for a build of that folder only, scores every copy against the original
@@ -439,20 +442,54 @@ def auto(a):
     """--auto N: the permuter on the closest near misses, one after another (each run is a child process)"""
     import json, subprocess
     resdir = os.path.join(ROOT, "Results")
-    near = list_candidates(resdir, None)
     notes = os.path.join(ROOT, "Notes", "permuter"); os.makedirs(notes, exist_ok=True)
-    picked = []
-    for n, size, what, note, src in near:
+    picked, far, left = [], [], []
+    near = list_candidates(resdir, None)                    # the last build's differences (JPOG: bytes that differ)
+    dist = {what.split("  ")[0].strip(): n for n, size, what, note, src in near}
+    limit = 24                                              # JPOG bytes; Zoo has no byte count (10**6 = unknown)
+    # 1. the session's own choice: Notes\PERMUTER_TARGETS.txt, one "<folder\file.cpp> <Class::method>" per line
+    tfile = os.path.join(ROOT, "Notes", "PERMUTER_TARGETS.txt")
+    if os.path.exists(tfile):
+        for ln in open(tfile, encoding="utf-8", errors="replace"):
+            ln = ln.split("#", 1)[0].strip()
+            if not ln: continue
+            parts = ln.split()
+            if len(parts) not in (2, 3):
+                print(f"  PERMUTER_TARGETS.txt: skipped '{ln}' (want: <folder\\file.cpp> <Class::method>)"); continue
+            rel = parts[0].replace("/", os.sep).replace("\\", os.sep)
+            if rel.lower().startswith("src" + os.sep): rel = rel[4:]
+            func = parts[1].strip(); sym = parts[2] if len(parts) == 3 else None   # 3rd: --sym for overloads
+            if not rel.lower().endswith((".cpp", ".c")):
+                print(f"  PERMUTER_TARGETS.txt: skipped {func} in {rel} (the permuter rewrites .cpp files only)"); continue
+            if not os.path.isfile(os.path.join(ROOT, "Src", rel)):
+                print(f"  PERMUTER_TARGETS.txt: no such file Src\\{rel}"); continue
+            n = dist.get(func, 10**6)
+            if n != 10**6 and n > limit:
+                far.append((func, rel, n)); continue          # not a near miss: no build spent on it
+            entry = (n, func, rel, re.sub(r"[^\w.-]+", "_", f"{rel}__{func}" + (f"__{sym}" if sym else "")), sym)
+            picked.append((entry, ln))
+        picked.sort(key=lambda p: p[0][0])                       # closest first; the rest stays queued
+        left = [ln for _, ln in picked[a.auto:]]
+        picked = [e for e, _ in picked[:a.auto]]
+        print(f"{len(picked)} targets from Notes\\PERMUTER_TARGETS.txt"
+              + (f", {len(left)} left for the next run" if left else "")
+              + (f", {len(far)} skipped (more than {limit} bytes differ: not near misses)" if far else ""))
+    # 2. the rest from the last build's near misses (JPOG: closest first; Zoo has no byte count, so order is rough)
+    for n, size, what, note, src in (near if len(picked) < a.auto else []):
         func = what.split("  ")[0].strip()
         rel = src.replace("/", os.sep).replace("\\", os.sep)
         if "operator" in func or "`" in func or "::" not in func and not re.match(r"^\w+$", func):
             continue                                            # spellings find_function cannot locate
         tag = re.sub(r"[^\w.-]+", "_", f"{rel}__{func}")
-        if os.path.exists(os.path.join(notes, tag + ".md")) and not a.again:
+        if os.path.exists(os.path.join(notes, tag + ".md")) and not a.again or any(p[3] == tag for p in picked):
             continue
-        picked.append((n, func, rel, tag))
+        picked.append((n, func, rel, tag, None))
         if len(picked) >= a.auto: break
     if not picked:
+        for f, r, n in far: print(f"  skipped {f} ({r}): {n} bytes differ - not a near miss")
+        if far and os.path.exists(tfile):
+            try: os.remove(tfile)
+            except OSError: pass
         print("nothing to do: no near misses without a report (use --again to redo them)"); return
     stamp = f"{datetime.datetime.now():%Y-%m-%d_%H%M}"
     summary = os.path.join(notes, f"AUTO_{stamp}.md")
@@ -462,14 +499,20 @@ def auto(a):
              "| Function | File | Start | Best | Result | Report |", "|---|---|---|---|---|---|"]
     def write():
         with open(summary, "w", encoding="utf-8", newline="\n") as f: f.write("\n".join(lines) + "\n")
+    if far:
+        lines.append("")
+        lines.append(f"Skipped from PERMUTER_TARGETS.txt without a build - more than {limit} bytes differ, so mechanical "
+                     "rewrites will not close them (a source change by hand is needed):")
+        lines += [f"- {f} ({r}): {n} bytes" for f, r, n in far]
     write()
     print(f"{len(picked)} functions queued; summary: Notes\\permuter\\{os.path.basename(summary)}")
     try:
-        for i, (n, func, rel, tag) in enumerate(picked):
+        for i, (n, func, rel, tag, sym) in enumerate(picked):
             print(f"\n=== {i + 1}/{len(picked)}  {func}  ({rel}{'' if n == 10**6 else f', {n} bytes differ'})", flush=True)
             cmd = [sys.executable, os.path.abspath(__file__), rel, func, "--rounds", str(a.rounds), "--batch", str(a.batch),
                    "--timeout", str(a.timeout), "--no-rebuild", "--skip-far"] + (["--host"] if a.host else []) + \
-                  (["--types"] if a.types else []) + (["--seed", str(a.seed)] if a.seed is not None else [])
+                  (["--types"] if a.types else []) + (["--seed", str(a.seed)] if a.seed is not None else []) + \
+                  (["--sym", sym] if sym else [])
             res = {}
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace")
             for ln in p.stdout:
@@ -492,6 +535,16 @@ def auto(a):
     except KeyboardInterrupt:
         lines.append("\nStopped by Ctrl+C."); write(); print("\nstopped")
     finally:
+        if os.path.exists(tfile):                              # done: keep it with the summary; unrun targets stay queued
+            try:
+                import shutil
+                shutil.copy2(tfile, os.path.join(notes, f"PERMUTER_TARGETS_{stamp}.done.txt"))
+                if left:
+                    with open(tfile, "w", encoding="utf-8", newline="\n") as f:
+                        f.write("# targets not run yet (Tools\\permuter\\permute.py --auto)\n" + "\n".join(left) + "\n")
+                else:
+                    os.remove(tfile)
+            except OSError: pass
         if not a.no_rebuild and not a.host:
             request_build("perm-auto-full", "")
             print("queued a normal full build so Results\\ is back to the real sources")

@@ -1,0 +1,10 @@
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+??4?$TArray@VTGUIStateVarInfo@Toshi@@@Toshi@@QAEXABV01@@Z = 0x86c0
+??4?$TArray@VTPCString@Toshi@@@Toshi@@QAEXABV01@@Z = 0x7b50
+??_ETPCString@Toshi@@QAEPAXI@Z = 0x60d0
+?ms_paDirectionName@TGUIWidget@Toshi@@2PAVTPCString@2@A = 0x48058
+?ms_saElementTypeName@TGUIElement@Toshi@@0PAVTPCString@2@A = 0x480f0
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+?ms_oComponentClasses@TGUIInterface@Toshi@@0V?$TNodeList@VTGUIComponentInfo@Toshi@@@2@A = 0x48910
+?ms_oLayoutClasses@TGUIInterface@Toshi@@0V?$TNodeList@VTGUILayoutInfo@Toshi@@@2@A = 0x48920
+?ms_oWidgetClasses@TGUIInterface@Toshi@@0V?$TNodeList@VTGUIWidgetInfo@Toshi@@@2@A = 0x48930

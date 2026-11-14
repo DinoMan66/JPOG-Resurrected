@@ -8,6 +8,7 @@
 #include "TGUIAPI.h"
 #include "TPString.h"
 #include "TLString.h"
+#include "TObject.h"
 #include "TGUIAlignment.h"
 #include "TGUIColour.h"
 
@@ -54,6 +55,7 @@ public:
     bool DeserialiseSolid(TGUIInterface* gui, const PProperties* properties);
 
     int GetParameterID() const;
+    const TClass* GetParameterType() const;
     ElementType GetElementType() const;
     Fill GetFillX() const;
     Fill GetFillY() const;

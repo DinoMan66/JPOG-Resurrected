@@ -19,6 +19,16 @@ it (a single reference proves nothing - its own check would pass by construction
 seen at several addresses (template or inline copies) are listed for a look, never written.
 Needs capstone or GNU objdump for Zoo, like compare.py.
 """
+import os as _os, sys as _sys
+# Run as `py Tools\\x.py`, Python puts Tools\\ first on the path, and the project's own Tools\\dis.py then hides the
+# standard 'dis' module: capstone (through inspect) fails to load and the tool falls back to objdump. Load the
+# standard modules before Tools\\ can shadow them.
+_sys.path[:] = [_p for _p in _sys.path if _os.path.abspath(_p or ".") != _os.path.dirname(_os.path.abspath(__file__))]
+import inspect, dis  # noqa: E401,F401
+try:
+    import capstone  # noqa: F401
+except Exception:
+    pass
 import argparse, collections, csv, glob, os, re, struct, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -126,7 +136,7 @@ def zoo(resdir):
             if key.startswith("@self:"):
                 cand = [f for f in pool if f[2] == key[6:]]
             else:
-                hit = [f for f in pool if key in refs(f)]
+                hit = [f for f in pool if any(key in x for x in refs(f))]   # part of a symbol, as the anti-cheat does
                 cand = ([f for f in hit if f[2].startswith("_$E")] + [f for f in hit if not f[2].startswith("_$E")])[:60]
         for o, k, name in cand:
             CURRENT[0] = va

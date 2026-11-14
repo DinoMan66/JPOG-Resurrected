@@ -49,14 +49,4 @@ const TClass* TGUIComponentInfo::GetTClass() const
     return m_pClass;
 }
 
-int TGUIComponentInfo::GetElementCount() const
-{
-    return m_aElementNames.Count();
-}
-
-const TPCString& TGUIComponentInfo::GetElementName(int index) const
-{
-    return m_aElementNames[index];
-}
-
 } // namespace Toshi

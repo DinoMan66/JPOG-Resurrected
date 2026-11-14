@@ -14,6 +14,7 @@ public:
     typedef TObject* (__stdcall *CreateObjectFn)();
     typedef TObject* (__stdcall *CreateObjectInPlaceFn)(void*);
     typedef void     (__stdcall *StaticFn)();
+    typedef bool     (__stdcall *TreeFn)(TClass*, void*);
 
     TClass(const char* name, TClass* parent, CreateObjectFn create, CreateObjectInPlaceFn createInPlace,
            StaticFn initialise, StaticFn deinitialise, unsigned int version);
@@ -36,6 +37,7 @@ public:
     bool AttachClassToParent();
     bool operator==(const TClass& other) const;
     static const TClass* __stdcall Find(const char* name, const TClass* parent);
+    void RecurseTree(TreeFn onEnter, TreeFn onLeave, TreeFn onVisit, void* data);
 
 private:
     const char* m_pName;                    // +0x00
@@ -59,6 +61,7 @@ private:
     bool m_bStaticInitialised;              // +0x24
 
     static const TClass* __stdcall FindRecurse(const char* name, const TClass* cls, bool siblings);
+    void RecurseTree2(TreeFn onEnter, TreeFn onLeave, TreeFn onVisit, void* data);
 };
 
 } // namespace Toshi

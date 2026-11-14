@@ -1,16 +1,11 @@
 // Z:\Toshi\Source\TKernel\TNullFile.cpp - constructor/destructor of the null file and the null file system.
 // These live in their own translation unit in the binary (TFile's constructor is called, not inlined).
 #define TOSHI_API __declspec(dllexport)
-#include <new.h>
+#include "TNewDelete.h"
 #include "TKernelFileManager.h"
 #include "TMemory.h"
 
 namespace Toshi {
-
-TNullFile::TNullFile(TNullFileSystem* fileSystem) : TFile(fileSystem)
-{
-    m_iBytesWritten = 0;
-}
 
 TNullFile::~TNullFile()
 {
@@ -33,17 +28,12 @@ TNullFileSystem::~TNullFileSystem()
 
 TFile* TNullFileSystem::CreateFile(const TCString& path, unsigned int flags)
 {
-    void* memory = tmalloc(sizeof(TNullFile), 0, -1);
-    TNullFile* file;
-    if (memory == 0) {
-        file = 0;
-    } else {
-        file = new (memory) TNullFile(this);
-    }
+    TNullFile* file = new TNullFile(this);
     if (file != 0) {
         if (file->Open(path, flags)) {
             return file;
         }
+        delete file;
     }
     return 0;
 }

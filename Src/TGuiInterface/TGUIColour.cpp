@@ -12,6 +12,14 @@ TGUIColour::TGUIColour()
     m_ucBlue = 255;
 }
 
+TGUIColour::TGUIColour(const TGUIColour& other)
+{
+    m_ucAlpha = other.m_ucAlpha;
+    m_ucRed = other.m_ucRed;
+    m_ucGreen = other.m_ucGreen;
+    m_ucBlue = other.m_ucBlue;
+}
+
 TGUIColour::TGUIColour(float red, float green, float blue, float alpha)
 {
     m_ucAlpha = (unsigned char)(alpha * 255.0f);

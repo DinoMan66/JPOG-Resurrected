@@ -4,6 +4,7 @@
 #define TKERNELPILE_H
 
 __declspec(dllexport) void* __stdcall tmemalign(int alignment, int size);
+__declspec(dllexport) void* __stdcall trealloc(void* p, int size);
 
 namespace Toshi {
 

@@ -67,7 +67,7 @@ bool TModel::LoadTMD(const char* fileName)                              // 0x973
             m_pSkeleton->m_oKeyLibraryInstance.CreateEx(library, skeletonHeader.m_iTBase, skeletonHeader.m_iQBase,
                                                         skeletonHeader.m_iSBase, skeletonHeader.m_iTCount,
                                                         skeletonHeader.m_iQCount, skeletonHeader.m_iSCount);
-            if (LoadTRB(file))
+            if (LoadTMDHAL(file))
                 result = true;
         }
     }
@@ -165,13 +165,6 @@ int TModel::GetLODCount()                                               // 0x9a7
 int TModel::GetInstanceCount()                                          // 0x9a80
 {
     return m_iInstanceCount;
-}
-
-bool TModel::IsLoaded()                                                 // 0x9a90
-{
-    if (m_uiFlags & FLAG_LOADED)
-        return true;
-    return false;
 }
 
 bool TModel::IsCreated()                                                // 0x9aa0

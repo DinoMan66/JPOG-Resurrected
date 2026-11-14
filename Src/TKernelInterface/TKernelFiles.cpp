@@ -1,13 +1,15 @@
 // Z:\Toshi\Source\TKernel\TFile.cpp - file base class and the null / memory / ISO files.
-// Not written: Create, Open(TCString), path helpers, ISO buffering.
+// Not written: Create, Open(TCString), path helpers.
 #define TOSHI_API __declspec(dllexport)
 #include <stdio.h>
+#include <string.h>
 #include <stdarg.h>
 #include "TKernelMisc.h"
 #include "TKernelFiles.h"
 #include "TKernelFileManager.h"
 #include "TKernelSystem.h"
 #include "TMemory.h"
+#include "TKernelPile.h"
 
 namespace Toshi {
 
@@ -338,6 +340,136 @@ int TISOFile::GetWChar()
         return -1;
     }
     return value;
+}
+
+bool TISOFile::Open(const TCString& path, unsigned int flags)
+{
+    TCString internalPath = GetFileSystem()->MakeInternalPath(path);
+    unsigned int isoFlags = 0;
+    if (flags & 0x10) {
+        isoFlags = 0x10;
+    }
+    if (flags & 0x20) {
+        isoFlags |= 0x20;
+    }
+    m_uFlags = isoFlags;
+    bool found = GetFileSystem()->GetSubISOFile(this, internalPath);
+    if (found) {
+        if (!(m_uFlags & 0x10)) {
+            m_pBuffer = (unsigned char*)tmemalign(0x40, 0x2000);
+        }
+    }
+    return found;
+}
+
+int TISOFile::ReadUnbuffered(void* buffer, int size)
+{
+    unsigned int position = m_iPos;
+    if (size + position > (unsigned int)m_iSize) {
+        size = m_iSize - position;
+    }
+    TFile* file = GetFileSystem()->m_pISOFile;
+    if (position != m_iFilePointer) {
+        if (file->Seek(m_uStart + position, TSEEK_SET) == true) {
+            m_iFilePointer = position;
+        } else {
+            return 0;
+        }
+    }
+    file = GetFileSystem()->m_pISOFile;
+    int target = m_iPos + m_uStart;
+    if (file->Tell() != target) {
+        file->Seek(target, TSEEK_SET);
+    }
+    int count = GetFileSystem()->m_pISOFile->Read(buffer, size);
+    if (count < 0) {
+        return 0;
+    }
+    m_iFilePointer += count;
+    m_iPos = m_iFilePointer;
+    return count;
+}
+
+bool TISOFile::LoadBuffer(int offset)
+{
+    if (offset != m_iBufferStart) {
+        if (offset != m_iFilePointer) {
+            if (GetFileSystem()->m_pISOFile->Seek(m_uStart + offset, TSEEK_SET) == true) {
+                m_iFilePointer = offset;
+            } else {
+                return false;
+            }
+        }
+        TFile* file = GetFileSystem()->m_pISOFile;
+        int target = m_uStart + offset;
+        if (file->Tell() != target) {
+            file->Seek(target, TSEEK_SET);
+        }
+        int count = GetFileSystem()->m_pISOFile->Read(m_pBuffer, 0x2000);
+        if (count < 0) {
+            return false;
+        }
+        m_iFilePointer += count;
+        m_iBufferLength = count;
+        m_iBufferStart = offset;
+    }
+    return true;
+}
+
+int TISOFile::Read(void* buffer, int size)
+{
+    unsigned int position = m_iPos;
+    if (position < (unsigned int)m_iSize) {
+        if (size + position > (unsigned int)m_iSize) {
+            size = m_iSize - position;
+        }
+        if (!m_pBuffer) {
+            return ReadUnbuffered(buffer, size);
+        }
+        char* destination = (char*)buffer;
+        int total = 0;
+        int block = m_iPos & ~0x1FFF;
+        int endBlock = (m_iPos + size) & ~0x1FFF;
+        if (block != endBlock) {
+            // the request spans blocks: use what the cached block holds, then read whole blocks directly
+            if (block == m_iBufferStart) {
+                int index = m_iPos - block;
+                int available = m_iBufferLength - index;
+                if (available > 0) {
+                    memcpy(destination, m_pBuffer + index, available);
+                    destination += available;
+                    m_iPos += available;
+                    total = available;
+                }
+            }
+            int direct = endBlock - m_iPos;
+            if (direct > 0) {
+                int count = ReadUnbuffered(destination, direct);
+                destination += count;
+                total += count;
+                if (count != direct) {
+                    return total;
+                }
+            }
+            block = endBlock;
+        }
+        if (total != size) {
+            if (!LoadBuffer(block)) {
+                return total;
+            }
+            int index = m_iPos - block;
+            int remaining = size - total;
+            int available = m_iBufferLength - index;
+            int count = Min(available, remaining);
+            if (count > 0) {
+                memcpy(destination, m_pBuffer + index, count);
+                m_iPos += count;
+                total += count;
+            }
+        }
+        return total;
+    }
+    return 0;
 }
 
 void TISOFile::Close()

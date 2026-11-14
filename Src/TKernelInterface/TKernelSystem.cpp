@@ -2,11 +2,17 @@
 #define TOSHI_API __declspec(dllexport)
 #include "TKernelSystem.h"
 #include "TKernelFileManager.h"
+#include "TKernelFiles.h"
 #include "TMemory.h"
+#include "TNewDelete.h"
 
 namespace Toshi {
 
 // ---- TISOFileSystem
+TISOFileSystem::ISO9660PVD::ISO9660PVD()
+{
+}
+
 unsigned int TISOFileSystem::ISO9660PVD::GetPathTableBytePos() const
 {
     return m_uPathTablePos * m_uSectorSize;
@@ -96,6 +102,30 @@ TISOFileSystem::~TISOFileSystem()
     delete[] m_pDirectories;
 }
 
+TFile* TISOFileSystem::CreateFile(const TCString& path, unsigned int flags)
+{
+    if (!(flags & 1)) {
+        return 0;
+    }
+    TISOFile* file = new TISOFile(this);
+    if (file != 0) {
+        if (file->Open(path, flags)) {
+            return file;
+        }
+        delete file;
+    }
+    return 0;
+}
+
+void TISOFileSystem::DestroyFile(TFile* file)
+{
+    if (file != 0) {
+        TISOFile* isoFile = (TISOFile*)file;
+        isoFile->Close();
+        delete isoFile;
+    }
+}
+
 TFile* TISOFileSystem::GetISOFile()
 {
     return m_pISOFile;
@@ -134,6 +164,27 @@ void TKernelInterface::SetInstance(HINSTANCE__* instance)
     m_hInstance = instance;
 }
 
+bool TKernelInterface::Update()
+{
+    if (!m_bPaused) {
+        m_oSystemTimer.Update();
+        float delta = GetSystemTimer()->GetDelta();
+        float framesPerSecond = 1.0f / delta;
+        float timer = m_fFPSTimer + delta;
+        // once a second the average frame rate is blended with the latest instantaneous value
+        if (timer > 1.0f) {
+            m_fAverageFPS = (framesPerSecond + m_fAverageFPS) * 0.5f;
+            m_fFPSTimer = 0.0f;
+        } else {
+            m_fFPSTimer = timer;
+        }
+        m_pScheduler->Update();
+    } else {
+        m_pScheduler->UpdateKernelPaused();
+    }
+    return true;
+}
+
 float TKernelInterface::GetFPS()
 {
     return 1.0f / m_oSystemTimer.GetDelta();
@@ -145,6 +196,16 @@ void __stdcall TKernelInterface::InitialiseStatic()
 
 void __stdcall TKernelInterface::DeinitialiseStatic()
 {
+}
+
+TObject* __stdcall TKernelInterface::CreateObjectInPlace(void* memory)
+{
+    return 0;
+}
+
+TObject* __stdcall TKernelInterface::CreateObject()
+{
+    return 0;
 }
 
 float TKernelInterface::GetAverageFPS()

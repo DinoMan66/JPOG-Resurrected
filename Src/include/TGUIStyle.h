@@ -8,19 +8,24 @@
 #include "TGUIAPI.h"
 #include "TGUIDeserialisable.h"
 #include "TGUIMemory.h"
+#include "TGUIPairNode.h"
+#include "TGUIStyleParameterInfo.h"
 #include "TGUIStyleRootComponent.h"
 #include "TNodeList.h"
+#include "PPropertyValue.h"
 #include "TPString.h"
 
 namespace Toshi {
 
 class TGUIInterface;
 class TGUIWidgetInfo;
+class TGUIWidget;
 
 class TGUI_API TGUIStyle : public TGUIDeserialisable, public TNodeList<TGUIStyle>::TNode
 {
 public:
     TGUIStyle();
+    TGUIStyle(const TGUIStyle& other);
     virtual ~TGUIStyle();
 
     virtual TClass& GetClass() const;                                       // slot 0
@@ -30,6 +35,8 @@ public:
     virtual TGUIInterface* GetInterface() const { return m_pInterface; }    // slot 10
 
 protected:
+    TGUIPairNode<TPCString, PPropertyValue>* FindFixedWidgetPropertyPair(const TPCString& name) const;
+
     virtual const TArray<TGUIPropertySpec*>* GetPropertyInfoSet() const { return ms_oPropertySet; }    // slot 11
     // slot 12
     virtual const TSortedArray<TGUIPropertySpec*, TGUIPropertySpec::Comparator>* GetPropertyInfoOrderedSet() const
@@ -43,11 +50,38 @@ public:
     int GetParameterCount() const { return m_ucParameterCount; }
     const TGUIWidgetInfo* GetWidgetInfo() const { return m_pWidgetInfo; }
     const TPCString& GetName() const { return m_oName; }
+    bool IsWidgetStyle(const TPCString& widgetName) const;
+    PPropertyValue GetFixedWidgetProperty(const TPCString& name) const;
+    void ReleaseFixedWidgetProperty(const TPCString& name);
+    void ApplyFixedWidgetProperties(TGUIWidget* widget);
+    bool IsWidgetPropertyFixed(const TPCString& name) const;
     void SetName(TPCString& name) { m_oName = name; }
+    bool Val_name_property() const;
+    PPropertyValue Get_name_property() const;
+    void Set_name_property(const PPropertyValue& value);
+    bool Val_margintop_property(const PPropertyValue& value);
+    bool Val_marginbottom_property(const PPropertyValue& value);
+    bool Val_marginleft_property(const PPropertyValue& value);
+    bool Val_marginright_property(const PPropertyValue& value);
+    PPropertyValue Get_margintop_property() const;
+    void Set_margintop_property(const PPropertyValue& value);
+    PPropertyValue Get_marginbottom_property() const;
+    void Set_marginbottom_property(const PPropertyValue& value);
+    PPropertyValue Get_marginleft_property() const;
+    void Set_marginleft_property(const PPropertyValue& value);
+    PPropertyValue Get_marginright_property() const;
+    void Set_marginright_property(const PPropertyValue& value);
+    bool IsCompatibleWith(TGUIWidget* widget);
+    bool IsCompatibleWith(TGUIStyle* style);
+    const TGUIStyleParameterInfo* GetParameterInfo(int index) const;
+    const TGUIStyleParameterInfo* GetParameterInfo(const TPCString& name) const;
+    int FindParameter(const TPCString& name) const;
+    TGUIStyleState* GetState(const TPCString& component, unsigned int stateBits) const;
+    TGUIStyleState* GetState(int component, unsigned int stateBits) const;
     TGUIStyleRootComponent& GetRootComponent(int index) { return m_pRootComponents[index]; }
 
     // margins, in pixels
-    void GetMargins(int& left, int& right, int& top, int& bottom) const
+    void GetMargins(int& left, int& right, int& top, int& bottom)
     {
         left = m_sMarginLeft;
         right = m_sMarginRight;
@@ -94,11 +128,8 @@ private:
     const TGUIWidgetInfo* m_pWidgetInfo;            // +0x18
     TPCString m_oName;                              // +0x1C
     unsigned char m_ucParameterCount;               // +0x20
-    /* 0x24 */ int m_unk24;
-    /* 0x28 */ int m_unk28;
-    /* 0x2C */ int m_unk2C;
-    /* 0x30 */ int m_unk30;
-    /* 0x34 */ int m_unk34;
+    TGUIStyleParameterInfo* m_pParameterInfos;      // +0x24, m_ucParameterCount entries
+    TNodeList<TGUIPairNode<TPCString, PPropertyValue> > m_oFixedProperties;     // +0x28, 0x10 bytes
     /* 0x38 */ int m_unk38;
     short m_sMarginTop;                             // +0x3C
     short m_sMarginBottom;                          // +0x3E

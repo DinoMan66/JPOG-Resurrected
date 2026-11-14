@@ -32,7 +32,12 @@ class TGUIPropertySpec;
 class TGUILayoutManager;
 class TGUIRectangle;
 class TGUIStyle;
+class TGUIStyleParameterInfo;
+class TGUITextureSection;
 class TGUIWidgetInfo;
+class TLString;
+class TGUIScreen;
+class TGUIWindow;
 
 class TGUI_API TGUIWidget : public TGUIDeserialisable, public TNodeList<TGUIWidget>::TNode
 {
@@ -51,13 +56,24 @@ public:
         SIZE_MODE_2 = 2     // the default
     };
 
+    // Where a scroll bar or slider sits and which way it runs; PGUICore's widgets use them as parameters.
+    // The enumerator values are not known yet.
+    enum Placement
+    {
+    };
+
+    enum Orientation
+    {
+    };
+
     // The four directions focus can move in; the enumerator names are placeholders
     enum NeighbourDirection
     {
         NEIGHBOUR_DIRECTION_0,
         NEIGHBOUR_DIRECTION_1,
         NEIGHBOUR_DIRECTION_2,
-        NEIGHBOUR_DIRECTION_3
+        NEIGHBOUR_DIRECTION_3,
+        NEIGHBOUR_DIRECTION_NONE = 6    // GetDirectionEnum finds no such name
     };
 
     // The bits of m_uiState
@@ -108,7 +124,7 @@ public:
     virtual bool OnButtonRelease(TInputInterface::InputEvent* event, int doodad);       // slot 26
     virtual bool OnButtonHit(TInputInterface::InputEvent* event, int doodad);           // slot 27
     virtual bool OnAxisMove(TInputInterface::InputEvent* event, int doodad);            // slot 28
-    virtual bool OnPointerMove(int x, int y) { return false; }                          // slot 29
+    virtual bool OnPointerMove(int x, int y);                                          // slot 29
     virtual bool OnPointerEnter();                                                      // slot 30
     virtual bool OnPointerExit();                                                       // slot 31
     virtual bool OnPaint(TGUIDisplayContext* context);                                  // slot 32
@@ -123,7 +139,6 @@ public:
     bool IsState(unsigned int mask, unsigned int value) const { return (m_uiState & mask) == value; }
     bool IsState(unsigned int mask) const { return (m_uiState & mask) != 0; }
     // Applies value to the state bits selected by mask and tells the widget's observers
-    void SetState(unsigned int mask, unsigned int value);
     void SetState(unsigned int mask, bool on) { SetState(mask, on == true ? mask : 0); }
     void SetSelected(bool on) { SetState(STATE_SELECTED, on); }
     void SetRollover(bool on) { SetState(STATE_ROLLOVER, on); }
@@ -133,6 +148,8 @@ public:
 
     // layout
     bool IsLayoutValid() const { return m_bLayoutValid; }
+    void SetLayoutValid(bool valid) { m_bLayoutValid = valid; }
+    TGUIWidget* GetChildAtPoint(int x, int y, unsigned int flags, unsigned int mask);
     void SetPaintChildrenFirst(bool first) { m_bPaintChildrenFirst = first; }
     bool DoesPaintChildrenFirst() const { return m_bPaintChildrenFirst; }
     void SetValidated(bool validated) { m_bValidated = validated; }
@@ -152,6 +169,7 @@ public:
 
     // name, position and size
     const TPCString& GetName() const { return m_oName; }
+    void SetName(const TPCString& name) { m_oName = name; }
     PlaceMode GetPlaceMode() const { return m_ePlaceMode; }
     SizeMode GetSizeModeVert() const { return m_eSizeModeVert; }
     SizeMode GetSizeModeHoriz() const { return m_eSizeModeHoriz; }
@@ -176,11 +194,49 @@ public:
         m_eSizeModeHoriz = horizontal;
         m_eSizeModeVert = vertical;
     }
+    void SetStyle(TGUIStyle* style);
+    void Create(TGUIInterface* gui, TGUIStyle* style, const TPCString& name);
+    void SetFixedSize(int width, int height);
+    void AddWidget(TGUIWidget* widget, bool front);
+    void RemoveWidget(TGUIWidget* widget);
+    void SetFixedHeight(int height);
+    void SetFixedWidth(int width);
+    void SetHeight(int height);
+    void SetWidth(int width);
+    bool CanResizeHoriz() const;
+    bool CanResizeVert() const;
+    bool CanMove() const;
+    TGUIWidget* FindChildManager();
+    TGUIWidget* FindIndexedChild(int index) const;
+    bool CanFocus();
+    void TransformDeviceToWidget(int x, int y, int& widgetX, int& widgetY) const;
+    void TransformWidgetToDevice(int x, int y, int& deviceX, int& deviceY) const;
+    void InvalidateComponentCache(bool recursive);
+    void SetParameter(int index, const TLString& value);
+    void SetParameter(int index, TGUITextureSection* value);
+    PPropertyValue GetParameter(int index) const;
+    bool Val_style_parameter(const PPropertyValue& value, TGUIStyleParameterInfo* info);
+    PPropertyValue Get_style_parameter(TGUIStyleParameterInfo* info) const;
+    void Set_state_property(const TPCString& name, bool set);
+    void Set_state_property(int index, bool set);
+    bool Get_state_property(int index);
+    bool Get_state_property(const TPCString& name);
+    void GetMargins(int& left, int& right, int& top, int& bottom);
+    void GetInteriorSize(int& width, int& height) const;
+    bool IsDescendantOf(const TGUIWidget* ancestor) const;
+    bool IsAncestorOf(const TGUIWidget* descendant) const;
+    TGUIWindow* GetWindow();
+    TGUIScreen* GetScreen();
+    void RequestFocus();
+    void SetState(unsigned int mask, unsigned int value);
+    void SetSize(int width, int height);
     void SetSizeModeVert(SizeMode mode) { m_eSizeModeVert = mode; }
     void SetSizeModeHoriz(SizeMode mode) { m_eSizeModeHoriz = mode; }
     void SetYPos(int y) { SetPosition(m_sX, y); }
     void SetXPos(int x) { SetPosition(x, m_sY); }
     void SetPosition(int x, int y);
+    void SetPositionCenter();
+    bool HitTest(int x, int y, int& localX, int& localY);
 
     // interior size: the widget's size without the margins of its style
     TGUIWidget* FindNamedChild(const TPCString& name) const;
@@ -198,6 +254,7 @@ public:
     void OrderChildMovePosition(TGUIWidget* child, int offset);
 
     static const TGUIWidgetInfo* GetStaticWidgetInfo() { return ms_widget_info; }
+    static NeighbourDirection GetDirectionEnum(const TPCString& name);
     static const TPCString& GetDirectionName(NeighbourDirection direction) { return ms_paDirectionName[direction]; }
 
     // property accessors: the GUI property files set these through the widget's property specs
@@ -216,8 +273,18 @@ public:
     void Set_ypos_property(const PPropertyValue& value);
     PPropertyValue Get_xpos_property() const;
     void Set_xpos_property(const PPropertyValue& value);
+    bool Val_sizemode_horiz_property(const PPropertyValue& value);
+    bool Val_sizemode_vert_property(const PPropertyValue& value);
+    bool Val_placemode_property(const PPropertyValue& value);
+    bool Val_xpos_property(const PPropertyValue& value);
+    bool Val_ypos_property(const PPropertyValue& value);
+    bool Val_width_property(const PPropertyValue& value);
+    bool Val_height_property(const PPropertyValue& value);
+    void Set_height_property(const PPropertyValue& value);
+    void Set_width_property(const PPropertyValue& value);
     bool Val_name_property(const PPropertyValue& value);
     PPropertyValue Get_name_property() const;
+    void Set_name_property(const PPropertyValue& value);
 
     static void* operator new(size_t size) { return TGUINew(size); }
     static void* operator new(size_t size, void* memory) { return memory; }
@@ -234,6 +301,10 @@ protected:
     static TArray<TGUIPropertySpec*>* ms_oPropertySet;
 
     TGUIWidget(const TGUIWidget& other);
+    void PackChildren();
+    void SetComponentBBox(int component, int x, int y, int width, int height);
+    void GetComponentInteriorBBox(int component, int& left, int& top, int& right, int& bottom);
+    void RemoveFocus();
 
 private:
     static TObject* __stdcall CreateObject();
@@ -250,7 +321,7 @@ private:
     TGUIInterface* m_pInterface;                // +0x28
     TGUIStyle* m_pStyle;                        // +0x2C
     /* 0x30 */ unsigned char m_unk30;
-    /* 0x34 */ int m_unk34;
+    PPropertyValue* m_pParameters;              // +0x34, one value per parameter of the style
 protected:
     const TGUIWidgetInfo* m_pWidgetInfo;        // +0x38 (each derived class's constructor sets its own)
 private:

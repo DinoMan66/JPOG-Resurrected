@@ -6,7 +6,11 @@
 #include "TObject.h"
 #include "TPString.h"
 
+class PPropertyValue;
+
 namespace Toshi {
+
+class TGUIDeserialisable;
 
 class TGUI_API TGUIPropertySpec
 {
@@ -22,6 +26,10 @@ public:
 
     TGUIPropertySpec(const TPCString& name);
     virtual ~TGUIPropertySpec();
+    virtual TGUIPropertySpec* Clone() const = 0;                                                    // slot 1
+    virtual void set(TGUIDeserialisable* object, const PPropertyValue& value) const = 0;            // slot 2
+    virtual PPropertyValue get(const TGUIDeserialisable* object) const = 0;                         // slot 3
+    virtual bool validate(const TGUIDeserialisable* object, const PPropertyValue& value) const = 0; // slot 4
     TGUIPropertySpec& operator=(const TGUIPropertySpec& other);
 
     bool operator==(const TGUIPropertySpec& other);
@@ -37,6 +45,7 @@ public:
     const TClass* GetBaseClass() const;
     bool IsEnumerated() const;
     int GetEnumCount() const;
+    int GetEnumValue(const TPCString& name) const;
     const TPCString& GetEnumName(int index) const;
 
 protected:

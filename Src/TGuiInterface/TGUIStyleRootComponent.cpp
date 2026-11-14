@@ -1,5 +1,6 @@
 // Z:\Toshi\Source\TGUI - TGUIStyleRootComponent. The original file name is not in the binary's strings.
 #define TGUIINTERFACE_EXPORTS
+#include "TNewDelete.h"
 #include "TGUIStyleRootComponent.h"
 
 namespace Toshi {
@@ -20,6 +21,26 @@ void TGUIStyleRootComponent::AddState(TGUIStyleState* state)
 TNodeList<TGUIStyleState>& TGUIStyleRootComponent::GetStates()
 {
     return *this;
+}
+
+TGUIStyleState* TGUIStyleRootComponent::CreateState(const TGUIStateRule& rule)
+{
+    TGUIStyleState* state = FindState(rule);
+    if (state == 0) {
+        state = new TGUIStyleState(rule);
+        AddState(state);
+    }
+    return state;
+}
+
+TGUIStyleState* TGUIStyleRootComponent::FindState(const TGUIStateRule& rule)
+{
+    for (Iterator it(Begin()); it != End(); ++it) {
+        if (it->HasStateRule(rule)) {
+            return it.Get();
+        }
+    }
+    return 0;
 }
 
 void TGUIStyleRootComponent::GetMargins(int& left, int& right, int& top, int& bottom)

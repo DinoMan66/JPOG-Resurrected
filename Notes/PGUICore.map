@@ -1,0 +1,5 @@
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+??0PGUILayoutManager@Toshi@@IAE@XZ = 0x23070
+?ms_layout_info@PGUIDiscLayout@@0PAVTGUILayoutInfo@Toshi@@A = 0x3af68
+?ms_layout_info@PGUIGridLayout@@0PAVTGUILayoutInfo@Toshi@@A = 0x3af28
+?ms_layout_info@PGUIStackLayout@@0PAVTGUILayoutInfo@Toshi@@A = 0x3ae68

@@ -1,5 +1,5 @@
 // Z:\Toshi\Source\TGUI - TGUILayoutManager. The original file name is not in the binary's strings.
-// The constructors and the destructor are still to do.
+// The default constructor is still to do.
 #define TGUIINTERFACE_EXPORTS
 #include "TNewDelete.h"
 #include "TGUILayoutManager.h"
@@ -8,6 +8,15 @@ namespace Toshi {
 
 TSortedArray<TGUIPropertySpec*, TGUIPropertySpec::Comparator>* TGUILayoutManager::ms_oPropertySetOrdered;
 TArray<TGUIPropertySpec*>* TGUILayoutManager::ms_oPropertySet;
+
+TGUILayoutManager::TGUILayoutManager(const TGUILayoutManager& other)
+    : TGUIDeserialisable(other), m_pInterface(other.m_pInterface), m_pLayoutInfo(other.m_pLayoutInfo)
+{
+}
+
+TGUILayoutManager::~TGUILayoutManager()
+{
+}
 
 bool TGUILayoutManager::Serialise(PProperties* properties)
 {

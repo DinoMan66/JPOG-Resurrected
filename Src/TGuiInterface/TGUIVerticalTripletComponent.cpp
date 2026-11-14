@@ -18,7 +18,7 @@ TGUIVerticalTripletComponent::~TGUIVerticalTripletComponent()
 {
 }
 
-TGUIComponent* TGUIVerticalTripletComponent::Clone() const
+TGUIVerticalTripletComponent* TGUIVerticalTripletComponent::Clone() const
 {
     return new TGUIVerticalTripletComponent(*this);
 }

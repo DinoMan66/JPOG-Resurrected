@@ -9,6 +9,9 @@
 #define TOSHI_API __declspec(dllexport)
 #include "TKernelMisc.h"
 #include "TCString.h"
+#include "TPString.h"
+#include "TKernelLocale.h"
+#include "TNewDelete.h"
 
 namespace Toshi {
 
@@ -35,11 +38,6 @@ void __stdcall TSystem::StringFormatDateTime(const TDateTime& dateTime, TCString
 TSysWChar* __stdcall TSystem::GetTempWString()
 {
     return (TSysWChar*)ms_aScratchMem;
-}
-
-char* __stdcall TSystem::GetTempCString()
-{
-    return (char*)ms_aScratchMem;
 }
 
 unsigned char* __stdcall TSystem::GetScratchMem()
@@ -172,6 +170,25 @@ void* __stdcall TSystem::MemCopy(void* dst, const void* src, unsigned int count)
 }
 
 
+// Formats an integer as octal, decimal or hexadecimal text (any other radix leaves the buffer untouched).
+// name: unknown, only called from TSystem::StringIntToString
+static char* f257c0(int value, char* buffer, int radix)
+{
+    if (radix == 8) {
+        sprintf(buffer, "%o", value);
+    } else if (radix == 10) {
+        sprintf(buffer, "%d", value);
+    } else if (radix == 16) {
+        sprintf(buffer, "%x", value);
+    }
+    return buffer;
+}
+
+const char* __stdcall TSystem::StringIntToString(int value, char* buffer, int radix)
+{
+    return f257c0(value, buffer, radix);
+}
+
 unsigned int __stdcall TSystem::BCDToInteger(unsigned int value)
 {
     unsigned int result = 0;
@@ -196,6 +213,47 @@ const TSysWChar* __stdcall TSystem::StringCharToUnicode(TSysWChar* dst, const ch
     }
     dst[i] = 0;
     return dst;
+}
+
+// The three pools are created the first time somebody asks for them.
+TCStringPool* __stdcall TSystem::CreateCStringPoolExplicit(int a, int b)
+{
+    if (ms_poTCStringPool == 0) {
+        ms_poTCStringPool = new TCStringPool(a, b);
+    }
+    return ms_poTCStringPool;
+}
+
+TCStringPool* __stdcall TSystem::CreateCStringPoolExplicit(const char* name, int a, int b)
+{
+    if (ms_poTCStringPool == 0) {
+        ms_poTCStringPool = new TCStringPool(name, a, b);
+    }
+    return ms_poTCStringPool;
+}
+
+TCStringPool* __stdcall TSystem::GetCStringPool()
+{
+    if (ms_poTCStringPool == 0) {
+        ms_poTCStringPool = new TCStringPool(0x400, 0);
+    }
+    return ms_poTCStringPool;
+}
+
+TLocale* __stdcall TSystem::GetLocale()
+{
+    if (ms_poLocale == 0) {
+        ms_poLocale = new TLocale;
+    }
+    return ms_poLocale;
+}
+
+TWStringPool* __stdcall TSystem::GetWStringPool()
+{
+    if (ms_poTWStringPool == 0) {
+        ms_poTWStringPool = new TWStringPool;
+    }
+    return ms_poTWStringPool;
 }
 
 } // namespace Toshi

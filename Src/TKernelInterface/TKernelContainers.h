@@ -19,6 +19,7 @@ public:
     };
 
 protected:
+    ~TGenericPool();
     void Reinit();
     void Reset();
     bool AllocBlock();

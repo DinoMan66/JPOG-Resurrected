@@ -5,6 +5,7 @@
 #define TGUITEXTUREFACTORY_H
 #include "TGUIAPI.h"
 #include "TObject.h"
+#include "TPString.h"
 
 namespace Toshi {
 
@@ -15,7 +16,7 @@ public:
     virtual ~TGUITextureFactory();
 
     virtual TClass& GetClass() const;
-    virtual void vf3() = 0;
+    virtual short vf3(const TPCString& name) = 0;   // looked up by TGUIInterface::FindTexture
     virtual void vf4() = 0;
     virtual void vf5() = 0;
     virtual void vf6() = 0;

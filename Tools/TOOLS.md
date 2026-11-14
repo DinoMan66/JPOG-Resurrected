@@ -23,17 +23,18 @@ Python tools run with `python3 -I Tools/<tool>.py ...` on Claude's side or `py T
 
 | Tool | What it does |
 |---|---|
-| `permuter\permute.py <file> <Class::method>` | Background permuter (PC + VM, no AI usage): mechanical rewrites of one function until it matches; report in `Notes\permuter\`; `--list` ranks the real near misses of the last build (bytes differ); for functions a few bytes off, not big differences; `--auto N` works through the N closest overnight (summary `Notes\permuter\AUTO_<date>.md`) |
+| `permuter\permute.py <file> <Class::method>` | Background permuter (PC + VM, no AI usage): mechanical rewrites of one function until it matches; report in `Notes\permuter\`; `--list` ranks the real near misses of the last build (bytes differ); for functions a few bytes off, not big differences; `--auto N` works through `Notes\PERMUTER_TARGETS.txt` and then the closest near misses overnight (summary `Notes\permuter\AUTO_<date>.md`) |
 | `neighbours.py <Dll> <name or rva>` | Nearest matched neighbours: the already-matched functions whose original code is most like the target's, with their source - read before writing a function (`--show N`, `--top N`, `--all`) |
 | `batch.py <folder\file.cpp> ...` | Judges every function of the given files in one table (MATCH / DIFF / size / first difference); `--open`, `--host`, `--results DIR` - for rounds of many small functions; a quick look, not the verdict |
 | `next.py` | Which functions to write next: unwritten functions ranked by estimated cost (size, naming evidence, class progress, named callees, closest matched neighbour); `--folder`, `--max-size`, `--json` |
 | `mapsuggest.py` | Map entries for references the anti-cheat could not check: re-compares matched functions, takes the original's targets, proposes entries (`Notes\map_suggestions.md`); `--write` adds only those confirmed by two or more functions |
+| `inlinecheck.py` | Functions our build calls that the original never calls (usually inline there; in Zoo possibly BBT-pasted) and which non-matching functions they block -> `Notes\inline_candidates.md` |
 | `fields.py <Dll> <Class>` | Fields of a class from its methods in the original binary: every offset touched through `this`, with size, reads/writes, a type guess, and a draft `m_unkXX` member list |
 | `regress.py --who <header>` / `regress.py <results>` | Shared-header guard: which folders a header reaches, and which functions matched at the last anti-cheat run but no longer do |
 | `hostbuild\hostbuild.py` | Compile on the PC without the VM (`--setup`, `--check <folder>` / `--check all`, `<folder>`, `--watch`); results in `Results_host\`, never trusted - for the permuter (`--host`) and quick iteration |
 | `notes_index.py <notes.md>` | Index of the notes (`Notes\NOTES_INDEX.md`); `--show <id>` prints one entry, `--find words` searches - read notes through this, not whole |
 | `localai\watch_ai.py` | Runs on the PC: a local model (llama-server or Ollama; `localai\start_local_ai.bat` starts model + watcher) reads files named in `Tools\queue\ask_<id>.json` and writes a short answer to `Tools\localai\out\` - saves Claude's usage on long inputs; answers are hints, not evidence |
-| `localai\preread.py` | Queues digests of `next.py`'s top targets for the local model (Ghidra C of the function, its callees and call sites) -> `Tools\localai\out\PREREAD.md`; run by `start_local_ai.bat` |
+| `localai\preread.py` | Local-model digests: of `next.py`'s top targets (PREREAD.md, run by `start_local_ai.bat`), of chosen functions (`--va`), and naming evidence for placeholders (`--evidence`, out\ev_*.md); a session asks via `Tools\queue\preread_<id>.txt` |
 | `show.py <Dll> <name or rva>` | Everything about one function: tracker/attempts rows, Ghidra's C, annotated disassembly |
 | `dis.py` | Annotated disassembly of a whole DLL (objdump + names), split per function |
 | `classmap.py` | Classes from vtables in all 19 binaries: base classes, ctors/dtors, slot names (`--slots NAME`) -> `Notes\classes.csv` / `classes.md` |

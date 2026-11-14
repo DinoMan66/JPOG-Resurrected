@@ -17,7 +17,7 @@ public:
     virtual ~TGUIVerticalTripletComponent();
 
     virtual TClass& GetClass() const;
-    virtual TGUIComponent* Clone() const;
+    virtual TGUIVerticalTripletComponent* Clone() const;
     virtual bool GetPreferredSize(PPropertyValue* value, int& width, int& height,
                                   short maxWidth, short maxHeight) const;
     virtual TGUIElement* GetElements();

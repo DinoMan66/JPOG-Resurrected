@@ -19,4 +19,8 @@ TISOFile::TISOFile(TISOFileSystem* fileSystem) : TFile(fileSystem)
     m_pBuffer = 0;
 }
 
+TISOFile::~TISOFile()
+{
+}
+
 } // namespace Toshi

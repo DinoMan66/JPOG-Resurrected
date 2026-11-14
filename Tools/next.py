@@ -26,6 +26,16 @@ The cost is relative (a ranking), not a number of rounds. The suggested file is 
 Needs capstone or GNU objdump for the deep checks, like neighbours.py; a cache of the matched functions' code is
 kept in .cache\\ in the project folder (outside Src/Tools/Notes, so never published).
 """
+import os as _os, sys as _sys
+# Run as `py Tools\\x.py`, Python puts Tools\\ first on the path, and the project's own Tools\\dis.py then hides the
+# standard 'dis' module: capstone (through inspect) fails to load and the tool falls back to objdump. Load the
+# standard modules before Tools\\ can shadow them.
+_sys.path[:] = [_p for _p in _sys.path if _os.path.abspath(_p or ".") != _os.path.dirname(_os.path.abspath(__file__))]
+import inspect, dis  # noqa: E401,F401
+try:
+    import capstone  # noqa: F401
+except Exception:
+    pass
 import argparse, csv, glob, importlib.util, json, math, os, re, sys
 from collections import Counter, defaultdict
 
@@ -220,6 +230,7 @@ def zoo_candidates():
             rel = os.path.normcase(os.path.join(pm.group(1), pm.group(2) + ".cpp"))
             file = src.get(rel, f"{pm.group(1).lower()}\\{pm.group(2).lower()}.cpp (new)")
         name = names.get(va) or string_name
+        if name and name.startswith("?"): name = pretty(name)          # zoo.map keys are parts of decorated names
         cls = class_of(name) or slot_class.get(va)
         if file is None and cls:
             file = class_file(cls)
@@ -366,8 +377,13 @@ def main():
     deep = min(a.deep, len(cands))
     if deep:
         print(f"checking callees and neighbours of the best {deep} of {len(cands)} candidates ...", file=sys.stderr, flush=True)
-        if ZOO: zoo_deep(cands, names, matched_names, deep)
-        else: jpog_deep(cands, deep)
+        try:
+            if ZOO: zoo_deep(cands, names, matched_names, deep)
+            else: jpog_deep(cands, deep)
+        except FileNotFoundError as ex:                     # neither capstone nor objdump on this PC
+            for c in cands:
+                for k in ("sim", "neighbour", "callees", "unnamed"): c.pop(k, None)
+            print(f"  no disassembler, so ranked without the callee/neighbour checks:\n  {ex}", file=sys.stderr)
     for c in cands: c["cost"] = full_cost(c)
     head = sorted(cands[:deep], key=lambda c: c["cost"]) + cands[deep:]
     show = head[:a.top]

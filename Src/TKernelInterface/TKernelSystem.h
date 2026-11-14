@@ -4,6 +4,7 @@
 // because the object machinery is not reconstructed yet).
 #ifndef TKERNELSYSTEM_H
 #define TKERNELSYSTEM_H
+#include "TKernelObject.h"
 #include "TKernelFiles.h"
 #include "TKernelThreads.h"
 
@@ -12,6 +13,7 @@ struct HINSTANCE__;
 namespace Toshi {
 
 class TScheduler;
+class TTask;
 class TKernelInterface;
 
 class __declspec(dllexport) TISOFileSystem : public TFileSystem
@@ -20,6 +22,7 @@ public:
     class __declspec(dllexport) ISO9660PVD
     {
     public:
+        ISO9660PVD();
         unsigned int GetPathTableBytePos() const;
         unsigned int GetBytePos(unsigned int sector) const;
         unsigned int GetPathTableSize() const;
@@ -74,10 +77,15 @@ public:
     };
 
     virtual ~TISOFileSystem();
+    virtual TFile* CreateFile(const TCString& path, unsigned int flags);
+    virtual void DestroyFile(TFile* file);
+    bool GetSubISOFile(TISOFile* file, const TCString& path);
     TFile* GetISOFile();
     const ISO9660PVD& GetPVD();
 
 private:
+    friend class TISOFile;
+
     ISO9660PVD m_oPVD;                      // +0x1C
     TFile* m_pISOFile;                      // +0x100
     ISO9660Directory* m_pDirectories;       // +0x104 (one entry per path table record)
@@ -92,6 +100,7 @@ inline TISOFileSystem* TISOFile::GetFileSystem() const
 class __declspec(dllexport) TKernelInterface
 {
 public:
+    bool Update();
     bool Pause(bool pause);
     bool IsPaused();
     TScheduler* GetScheduler() const;
@@ -104,34 +113,67 @@ public:
 private:
     static void __stdcall InitialiseStatic();
     static void __stdcall DeinitialiseStatic();
+    static TObject* __stdcall CreateObject();
+    static TObject* __stdcall CreateObjectInPlace(void* memory);
 
     void* m_pVTable;                        // +0x00
     char m_aPad04[4];                       // +0x04
     THPTimer m_oSystemTimer;                // +0x08
     TScheduler* m_pScheduler;               // +0x30
-    char m_aPad34[0x14];                    // +0x34
+    char m_aPad34[0x10];                    // +0x34
+    float m_fFPSTimer;                      // +0x44 (seconds since the average was last updated)
     float m_fAverageFPS;                    // +0x48
     char m_aPad4C[4];                       // +0x4C
     HINSTANCE__* m_hInstance;               // +0x50
     bool m_bPaused;                         // +0x54
 };
 
-class __declspec(dllexport) TScheduler
+class __declspec(dllexport) TScheduler : public TObject
 {
 public:
+    TScheduler(TKernelInterface* kernelInterface);
+    virtual TClass& GetClass() const;
+
+    void Update();
+    void DestroyTask(TTask& task);
+    void DestroyAllTasks();
+    void DestroyDyingTasks(TTask* task);
+    void SetDebugSlowTime(bool slow);
+    void UpdateKernelPaused();
+    void Debug_PrintTaskTree() const;
     int GetFrameCount();
     float GetTotalTime();
     float GetCurrentTimeDelta();
     TKernelInterface* GetKernelInterface();
 
+    static TClass m_sClass;
+
 private:
-    void* m_pVTable;                        // +0x00
-    char m_aPad04[4];                       // +0x04
+    template <class T> friend class TRef;
+
+    void UpdateActiveTasks(TTask* task);
+    void UpdateActiveTasksKernelPaused(TTask* task);
+    void DestroyTaskRecurse(TTask* task);
+    void DeleteTaskRecurse(TTask* task);
+    void DeleteTaskAtomic(TTask* task);
+    void DeleteTask(TTask* task);
+
+    static TObject* __stdcall CreateObject();
+    static TObject* __stdcall CreateObjectInPlace(void* memory);
+    static void __stdcall InitialiseStatic();
+    static void __stdcall DeinitialiseStatic();
+
+    int m_refCount;                         // +0x04 (the two list pointers below point here while the list is empty)
     TKernelInterface* m_pKernelInterface;   // +0x08
-    char m_aPad0C[0x18];                    // +0x0C
+    int m_unk0C;                            // +0x0C
+    int* m_unk10;                           // +0x10
+    int* m_unk14;                           // +0x14
+    int m_unk18;                            // +0x18
+    TTask* m_pRootTask;                     // +0x1C
+    int m_unk20;                            // +0x20
     float m_fTimeDelta;                     // +0x24
     float m_fTotalTime;                     // +0x28
-    char m_aPad2C[4];                       // +0x2C
+    float m_fDebugSlowTime;                 // +0x2C (1.0, or 0.01 while the slow-time debug mode is on)
     int m_iFrameCount;                      // +0x30
 };
 

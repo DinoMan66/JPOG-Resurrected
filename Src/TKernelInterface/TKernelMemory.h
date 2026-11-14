@@ -71,6 +71,9 @@ public:
     static void __stdcall DebugPrintFreeMemoryAt(const char* title);
     static void __stdcall DumpAllocationsToFile(TFile* file, MemBlock* block, int flags);
     static void __stdcall DumpAllocations(MemBlock* block, int flags);
+    static void __stdcall MemRecurse(void (__stdcall* nodeFunc)(MemNode*),
+                                     void (__stdcall* blockFunc)(MemBlock*, MemInfo*, unsigned int),
+                                     MemBlock* block);
 
     TMemory();
     ~TMemory();
@@ -91,6 +94,11 @@ protected:
     bool FreeMem(MemBlock* block);
 
 private:
+    static void __stdcall MemRecurseR(void (__stdcall* nodeFunc)(MemNode*),
+                                      void (__stdcall* blockFunc)(MemBlock*, MemInfo*, unsigned int),
+                                      MemBlock* block,
+                                      unsigned int depth);
+
     static bool m_bIsDebug;
     static bool m_bInitialised;
 

@@ -11,7 +11,10 @@ which starts llama-server with the model and then this watcher. By hand:
 
 It waits for questions Claude drops in Tools\\queue\\ask_<id>.json, reads the named project files HERE (so their
 text never enters Claude's context), asks the local model, and writes the answer to Tools\\localai\\out\\<id>.md.
-Claude then reads only the short answer. Nothing leaves this PC: the model runs locally (127.0.0.1 only).
+Claude then reads only the short answer. When a session queues a build (Tools\\queue\\request*.txt), the watcher
+pre-reads that folder's next unwritten functions by itself (PREREAD.md). For sessions without a shell it runs the
+project's own tools on request: Tools\\queue\\run_<id>.txt = `next.py --top 30` (output: out\\run_<id>.txt). It also runs Tools\\queue\\preread_<id>.txt requests (preread.py
+options on one line), so a session can ask for digests or naming evidence of the functions it is working on. Nothing leaves this PC: the model runs locally (127.0.0.1 only).
 
 A question file:
     {"id": "r312-notes", "question": "Which notes explain why a small inline helper is called instead of inlined?",
@@ -67,7 +70,7 @@ def chunks(parts, budget_chars):
     """group (file, [(n, text)]) into pieces of at most budget_chars, never splitting a line"""
     cur, size = [], 0
     for rel, rows in parts:
-        head = f"\n=== {rel} ===\n"
+        head = f"\n=== FILE {rel} (cite it as {os.path.basename(rel)}) ===\n"
         cur.append(head); size += len(head)
         last = None
         for n, text in rows:
@@ -135,12 +138,38 @@ def ask_model(url, model, ctx, prompt, max_tokens, kind="ollama"):
 
 
 RULES = ("You are reading project files for a colleague who cannot see them. Answer ONLY from the text given. "
-         "Be brief and factual. After each point give the file and line numbers it comes from, like "
-         "(MATCHING_NOTES.md 304-320). If the text does not answer the question, say 'not found in this part'. "
+         "Be brief and factual. After each point give the file and line numbers it comes from: the file named in "
+         "the === FILE ... === header above those lines, never any other name, e.g. (name.ext 304-320). "
+         "If the text does not answer the question, say 'not found in this part'. "
          "Do not guess, do not add advice.")
 
 
+def too_long(ex):
+    """llama-server's answer when a request does not fit its context"""
+    import urllib.error
+    if isinstance(ex, urllib.error.HTTPError) and ex.code == 400:
+        try: body = ex.read().decode("utf-8", errors="replace")
+        except Exception: body = ""
+        return "context" in body.lower() or not body
+    return False
+
+
 def answer(job, a):
+    """read in pieces sized to the server's context; if a piece still does not fit (code and hex take more tokens per
+    character than prose), read again in smaller pieces"""
+    last = None
+    for chars_per_token in (2.0, 1.4, 1.0):
+        try:
+            return answer_once(job, a, chars_per_token)
+        except Exception as ex:
+            if not too_long(ex):
+                raise
+            last = ex
+            print(f"    a piece did not fit the context; reading again in smaller pieces", flush=True)
+    raise last
+
+
+def answer_once(job, a, chars_per_token):
     q = str(job.get("question", "")).strip()
     if not q:
         raise ValueError("no question")
@@ -150,7 +179,7 @@ def answer(job, a):
         raise ValueError("no files")
     nlines = sum(len(r) for _, r in parts)
     nchars = sum(len(t) for _, r in parts for _, t in r)
-    budget = max(4000, int((a.ctx - 900 - max_words * 2) * 2.6))       # ~2.6 characters per token (hex and code), room for the answer
+    budget = max(3000, int((a.ctx - 900 - max_words * 2) * chars_per_token))   # characters per piece, room for the answer
     pieces = list(chunks(parts, budget))
     partial = []
     for i, piece in enumerate(pieces):
@@ -170,6 +199,142 @@ def answer(job, a):
     return head + final + "\n"
 
 
+AUTO_COOLDOWN = 900            # seconds before the same folder is pre-read again
+
+
+def auto_preread(state):
+    """A session's build request (Tools\\queue\\request*.txt: `round-NNN <time> <folder>`) means it is working in that
+    folder: pre-read that folder's next unwritten functions (preread.py --folder), so their digests are ready when the
+    session writes them. Nothing for the session to ask; it only stages Tools\\localai\\out\\PREREAD.md."""
+    if not os.path.exists(os.path.join(HERE, "preread.py")):
+        return
+    folders = {os.path.basename(d).lower(): os.path.basename(d) for d in glob.glob(os.path.join(ROOT, "Src", "*"))
+               if os.path.isdir(d) and os.path.basename(d).lower() not in ("include", "zzperm")}
+    for p in glob.glob(os.path.join(QUEUE, "request*.txt")):
+        try:
+            key = (os.path.basename(p), os.path.getmtime(p))
+            if key in state["seen"]:
+                continue
+            state["seen"].add(key)
+            words = open(p, encoding="utf-8", errors="replace").read().split()
+        except OSError:
+            continue
+        if words and words[0].lower().startswith("perm"):
+            continue                                    # the permuter's own scratch builds
+        for w in words[2:]:
+            f = folders.get(w.strip().lower())
+            if not f or time.time() - state["last"].get(f, 0) < AUTO_COOLDOWN:
+                continue
+            state["last"][f] = time.time()
+            try:
+                import subprocess
+                r = subprocess.run([sys.executable, os.path.join(HERE, "preread.py"), "--folder", f, "--top", "12"],
+                                   capture_output=True, text=True, errors="replace", timeout=600)
+                last = (r.stdout.strip().splitlines() or [""])[-2:] if r.stdout.strip() else ["no output"]
+                print(f"  build request for {f}: pre-reading its next functions ({' / '.join(last)[:150]})", flush=True)
+            except Exception as ex:
+                print(f"  build request for {f}: pre-read failed: {ex}", flush=True)
+
+
+RUN_TOOLS = {"next.py", "neighbours.py", "batch.py", "fields.py", "regress.py", "inlinecheck.py", "mapsuggest.py",
+             "notes_index.py", "verdict.py", "scoreall.py", "show.py", "trivial.py", "classmap.py", "similar.py",
+             "shapescan.py", "calleescan.py", "uiscan.py", "instances.py", "dis.py", "vtables.py", "switchgen.py"}
+
+
+MAX_RUN_LINES = 40
+
+
+def run_one(line):
+    """one `<tool>.py <args...>` line -> its output text"""
+    import shlex, subprocess
+    args = shlex.split(line.replace("\\", "/"), posix=True)
+    if args and args[0].lower() in ("py", "python", "python3"):
+        args = [a for a in args[1:] if a != "-I"]
+    tool = args[0].replace("Tools/", "").replace("tools/", "") if args else ""
+    if tool not in RUN_TOOLS:
+        raise ValueError(f"not an allowed tool: {tool!r} (allowed: {', '.join(sorted(RUN_TOOLS))})")
+    rest = []
+    for a in args[1:]:
+        if ".." in a.replace("\\", "/").split("/") or re.match(r"^[A-Za-z]:|^/", a):
+            raise ValueError(f"paths must stay inside the project: {a}")
+        hits = sorted(glob.glob(os.path.join(ROOT, a))) if any(c in a for c in "*?") else []
+        rest += [os.path.relpath(h, ROOT) for h in hits] or [a]
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "Tools", tool)] + rest, cwd=ROOT, capture_output=True,
+                       text=True, errors="replace", timeout=1800)
+    return (f"$ {tool} {' '.join(rest)}\nexit code {r.returncode}\n\n" + r.stdout +
+            ("\n--- stderr ---\n" + r.stderr if r.stderr.strip() else "")), r.returncode
+
+
+def run_tool_request(p):
+    """Tools\\queue\\run_<id>.txt from a Claude session that has no shell of its own: one `<tool>.py <args...>`
+    command per line (up to MAX_RUN_LINES - batch them: one commit and one read instead of many). Only the
+    project's own analysis/verdict tools in Tools\\ (RUN_TOOLS) run, with no shell, from the project folder; the
+    output of all lines goes to Tools\\localai\\out\\run_<id>.txt."""
+    name = os.path.basename(p)
+    ident = re.sub(r"[^\w.-]", "_", name[4:-4])[:60]
+    parts, codes = [], []
+    try:
+        time.sleep(1.0)
+        lines = [ln.strip() for ln in open(p, encoding="utf-8", errors="replace").read().splitlines()
+                 if ln.strip() and not ln.strip().startswith("#")]
+        if len(lines) > MAX_RUN_LINES:
+            parts.append(f"(only the first {MAX_RUN_LINES} of {len(lines)} lines were run)\n")
+            lines = lines[:MAX_RUN_LINES]
+        for ln in lines:
+            try:
+                text, code = run_one(ln)
+            except Exception as ex:
+                text, code = f"$ {ln}\nERROR: {type(ex).__name__}: {ex}\n", -1
+            parts.append(text); codes.append(code)
+        print(f"  {name}: ran {len(lines)} command(s), exit codes {codes}", flush=True)
+    except Exception as ex:
+        parts.append(f"ERROR: {type(ex).__name__}: {ex}\n"); print(f"  {name}: failed: {ex}", flush=True)
+    text = ("\n" + "=" * 100 + "\n").join(parts)
+    if len(text) > 400_000:
+        text = text[:200_000] + "\n... (cut: output over 400 KB - ask for less) ...\n" + text[-200_000:]
+    with open(os.path.join(OUT, f"run_{ident}.txt"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    try: os.remove(p)
+    except OSError: pass
+
+
+PREREAD_OPTS = {"--top", "--folder", "--max-size", "--min-size", "--va", "--evidence", "--force"}
+
+
+def run_preread_request(p):
+    """Tools\\queue\\preread_<id>.txt from a Claude session: preread.py options on one line (e.g. `--folder ui --top 20`,
+    `--va 0x4e9989 0x4e9a10`, `--evidence 0x61f8c0`). The questions it queues are answered by this watcher next."""
+    name = os.path.basename(p)
+    try:
+        time.sleep(1.0)
+        args = open(p, encoding="utf-8").read().split()
+        bad = [x for x in args if x.startswith("--") and x not in PREREAD_OPTS]
+        if bad:
+            raise ValueError("not a preread.py option: " + " ".join(bad))
+        import subprocess
+        r = subprocess.run([sys.executable, os.path.join(HERE, "preread.py")] + args, capture_output=True, text=True,
+                           errors="replace", timeout=600)
+        text = r.stdout[-3000:] + r.stderr[-2000:]
+        print(f"  {name}: preread.py {' '.join(args)} -> {text.strip().splitlines()[-1] if text.strip() else 'done'}", flush=True)
+    except Exception as ex:
+        text = f"ERROR: {type(ex).__name__}: {ex}\n"; print(f"  {name}: failed: {ex}")
+    with open(os.path.join(OUT, name[:-4] + ".log"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    try: os.remove(p)
+    except OSError: pass
+
+
+def server_down(ex):
+    """True when the model server itself is gone (crashed, window closed, still loading), not when it refused a request"""
+    import http.client, urllib.error
+    if isinstance(ex, urllib.error.HTTPError):
+        return ex.code == 503                                # llama-server answers 503 while (re)loading the model
+    if isinstance(ex, urllib.error.URLError):
+        ex = ex.reason if isinstance(ex.reason, BaseException) else ex
+    return isinstance(ex, (ConnectionError, http.client.RemoteDisconnected, TimeoutError)) or \
+        getattr(ex, "winerror", None) in (10053, 10054, 10061) or isinstance(ex, OSError) and "refused" in str(ex).lower()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="qwen3.5:9b")
@@ -182,7 +347,14 @@ def main():
     os.makedirs(OUT, exist_ok=True); os.makedirs(QUEUE, exist_ok=True)
     a.kind, a.url, a.ctx = find_server(a)
     print(f"local reader: {'llama-server' if a.kind == 'llama' else 'Ollama model ' + a.model} at {a.url}, context {a.ctx}, watching {QUEUE}\\ask_*.json  (Ctrl+C stops)")
+    crashes = {}                                          # ask file -> times the server died while answering it
+    auto = {"seen": set(), "last": {}}
     while True:
+        auto_preread(auto)
+        for p in sorted(glob.glob(os.path.join(QUEUE, "run_*.txt"))):
+            run_tool_request(p)
+        for p in sorted(glob.glob(os.path.join(QUEUE, "preread_*.txt"))):
+            run_preread_request(p)
         for p in sorted(glob.glob(os.path.join(QUEUE, "ask_*.json"))):
             name = os.path.basename(p)
             try:
@@ -194,11 +366,28 @@ def main():
                 text = answer(job, a)
                 print(f"    answered in {time.time() - t0:.0f} s")
             except Exception as ex:                               # a bad request must not stop the watcher
-                ident = re.sub(r"[^\w.-]", "_", name[4:-5])[:60]
-                text = f"<!-- local model: request failed -->\nERROR: {type(ex).__name__}: {ex}\n"
-                print(f"    failed: {ex}")
+                if server_down(ex):
+                    crashes[p] = crashes.get(p, 0) + 1
+                    if crashes[p] < 3:
+                        # the question stays queued; answer it once the server is back
+                        print(f"    the model server stopped answering ({ex}). It has crashed or its window was closed -"
+                              f" look at the llama-server window for the reason. Waiting for it to come back ...", flush=True)
+                        a.kind, a.url, a.ctx = find_server(a, wait=3600)
+                        print("    the server is back; continuing", flush=True)
+                        break
+                    ex = RuntimeError(f"the server stopped every time it read this request ({ex}) - it is probably "
+                                      "too large for the server's memory; ask with fewer or shorter files")
+                ident = re.sub(r"[^\w.-]", "_", str((locals().get("job") or {}).get("id") or name[4:-5]))[:60]
+                with open(os.path.join(OUT, ident + ".failed.txt"), "w", encoding="utf-8", newline="\n") as f:
+                    f.write(f"local model: request failed\nERROR: {type(ex).__name__}: {ex}\n")
+                print(f"    failed: {ex}  -> Tools\\localai\\out\\{ident}.failed.txt")
+                try: os.remove(p)
+                except OSError: pass
+                continue
             with open(os.path.join(OUT, ident + ".md"), "w", encoding="utf-8", newline="\n") as f:
                 f.write(text)
+            try: os.remove(os.path.join(OUT, ident + ".failed.txt"))
+            except OSError: pass
             if ident.startswith("pre_") and os.path.exists(os.path.join(HERE, "preread.py")):
                 try:                                              # keep Tools\localai\out\PREREAD.md current
                     import subprocess

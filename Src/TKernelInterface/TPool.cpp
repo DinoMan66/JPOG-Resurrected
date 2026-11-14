@@ -5,6 +5,11 @@
 
 namespace Toshi {
 
+TGenericPool::~TGenericPool()
+{
+    Reinit();
+}
+
 TGenericPool::TNode& TGenericPool::TNode::operator=(const TNode& o)
 {
     m_pNext = o.m_pNext;

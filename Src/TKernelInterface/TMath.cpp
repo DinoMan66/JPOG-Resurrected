@@ -101,8 +101,271 @@ float __stdcall TMath::Trunc(float value)
     return (float)TruncToInt(value);
 }
 
+// The integer conversion rounds to nearest here, so the correction compares the value with the rounded result.
+int __stdcall TMath::TruncToInt(float value)
+{
+    int rounded = (int)value;
+    if (value >= 0.0f) {
+        return rounded - (value < (float)rounded);
+    }
+    return rounded + (value > (float)rounded);
+}
+
+int __stdcall TMath::FloorToInt(float value)
+{
+    int rounded = (int)value;
+    return rounded - (value < (float)rounded);
+}
+
+int __stdcall TMath::CeilToInt(float value)
+{
+    int rounded = (int)value;
+    return rounded + (value > (float)rounded);
+}
+
+void __stdcall TMath::SinCos(float angle, float& sine, float& cosine)
+{
+    sine = (float)sin(angle);
+    cosine = (float)cos(angle);
+}
+
 // Not written: FloatToInt, RoundToInt, Round, SetFPUControlWord, GetFPUControlWord. The original is
 // hand-written FPU code (fist/fistp, fldcw/fnstcw) that cannot be expressed in plain C++.
+
+// Two spheres overlap when the squared centre distance does not exceed the squared radius sum.
+// depth is the penetration (radius sum - distance); offset is the centre-to-centre vector scaled by depth / radius sum.
+bool __stdcall TMath::SphereIntersection(const TVector3& centreA, float radiusA, const TVector3& centreB, float radiusB,
+                                         float* distanceSqMinusRadiusSq, TVector3* offset, float* depth)
+{
+    float penetration = 0.0f;
+    float radiusSum = radiusB + radiusA;
+    TVector3 delta;
+    delta.Subtract(centreB, centreA);
+    float radiusSumSq = radiusSum * radiusSum;
+    float distanceSq = delta.MagnitudeSq();
+    if (distanceSq <= radiusSumSq) {
+        if (depth != 0) {
+            penetration = radiusSum - (float)sqrt(distanceSq);
+            *depth = penetration;
+        }
+        if (offset != 0) {
+            if (depth == 0) {
+                penetration = radiusSum - (float)sqrt(distanceSq);
+            }
+            offset->Multiply(delta, penetration / radiusSum);
+        }
+        if (distanceSqMinusRadiusSq != 0) {
+            *distanceSqMinusRadiusSq = distanceSq - radiusB * radiusB;
+        }
+        return true;
+    }
+    return false;
+}
+
+// Same test on the ground plane (x and z only); the offset has no height component.
+bool __stdcall TMath::SphereIntersectionPlanar(const TVector3& centreA, float radiusA, const TVector3& centreB, float radiusB,
+                                               float* distanceSqMinusRadiusSq, TVector3* offset, float* depth)
+{
+    float radiusSum = radiusB + radiusA;
+    float dx = centreB.x - centreA.x;
+    float dz = centreB.z - centreA.z;
+    float distanceSq = dz * dz + dx * dx;
+    if (distanceSq <= radiusSum * radiusSum) {
+        float penetration = 0.0f;
+        if (depth != 0) {
+            penetration = radiusSum - (float)sqrt(distanceSq);
+            *depth = penetration;
+        }
+        if (offset != 0) {
+            if (depth == 0) {
+                penetration = radiusSum - (float)sqrt(distanceSq);
+            }
+            offset->x = dx * (penetration / radiusSum);
+            offset->z = (penetration / radiusSum) * dz;
+            offset->y = 0.0f;
+        }
+        if (distanceSqMinusRadiusSq != 0) {
+            *distanceSqMinusRadiusSq = distanceSq - radiusB * radiusB;
+        }
+        return true;
+    }
+    return false;
+}
+
+// Intersects a ray with an infinite line; t is only updated when the hit is in front of the ray and closer than t.
+bool __stdcall TMath::RaySegmentVsLine2D(const TVector2& rayOrigin, const TVector2& rayDirection, const TVector2& linePoint,
+                                         const TVector2& lineDirection, float& t)
+{
+    float determinant = lineDirection.y * rayDirection.x - lineDirection.x * rayDirection.y;
+    if (determinant != 0.0f) {
+        TVector2 toLine = rayOrigin;
+        toLine.Subtract(linePoint);
+        float hit = (-toLine.x * lineDirection.y + lineDirection.x * toLine.y) / determinant;
+        if (hit < t && 0.0f <= hit) {
+            t = hit;
+            return true;
+        }
+    }
+    return false;
+}
+
+// Outward normal of a capsule (segment start-end) at a surface point: radial around the nearer end cap,
+// perpendicular to the segment along its side.
+void __stdcall TMath::CalculateCapsuleNormal2D(const TVector2& capsuleStart, const TVector2& capsuleEnd, const TVector2& point,
+                                               TVector2& normal)
+{
+    float t = ClosestPointOnLine2D(capsuleStart, capsuleEnd, point);
+    if (t < 0.0f) {
+        normal = point;
+        normal.Subtract(capsuleStart);
+        normal.Normalise();
+    } else if (t > 1.0f) {
+        normal = point;
+        normal.Subtract(capsuleEnd);
+        normal.Normalise();
+    } else {
+        normal = capsuleEnd;
+        normal.Subtract(capsuleStart);
+        normal.Normalise();
+        normal.SetPerpendicular();
+        if (!PointVsPlane2D(normal, capsuleStart, point)) {
+            normal.Negate();
+        }
+    }
+}
+
+// Intersection of a ray with a circle. Returns the number of hits (0 or 2) and the two ray parameters.
+int __stdcall TMath::RayVsCircle2D(const TVector2& rayOrigin, const TVector2& rayDirection, const TVector2& centre, float radius,
+                                   float& t0, float& t1)
+{
+    TVector2 toCentre = centre;
+    toCentre.Subtract(rayOrigin);
+    float radiusSq = radius * radius;
+    float distanceSq = toCentre.MagnitudeSq();
+    if (radiusSq <= distanceSq) {
+        float along = TVector2::DotProduct(toCentre, rayDirection);
+        if (along < 0.0f) {
+            return 0;
+        }
+        if (radiusSq < distanceSq - along * along) {
+            return 0;
+        }
+    }
+    toCentre.Multiply(-1.0f);
+    float b = TVector2::DotProduct(toCentre, rayDirection);
+    float twoB = b + b;
+    float discriminant = (distanceSq - radiusSq) * -4.0f + twoB * twoB;
+    if (discriminant < 0.0f) {
+        return 0;
+    }
+    float root = (float)sqrt(discriminant);
+    t0 = -(root + twoB) * 0.5f;
+    t1 = 0.5f * (root - twoB);
+    return 2;
+}
+
+int __stdcall TMath::RayVsCircle3D(const TVector3& rayOrigin, const TVector3& rayDirection, const TVector3& centre, float radius,
+                                   float& t0, float& t1)
+{
+    TVector3 toCentre = centre;
+    toCentre.Subtract(rayOrigin);
+    float radiusSq = radius * radius;
+    float distanceSq = toCentre.MagnitudeSq();
+    if (radiusSq <= distanceSq) {
+        float along = TVector3::DotProduct(toCentre, rayDirection);
+        if (along < 0.0f) {
+            return 0;
+        }
+        if (radiusSq < distanceSq - along * along) {
+            return 0;
+        }
+    }
+    toCentre.Multiply(-1.0f);
+    float b = TVector3::DotProduct(toCentre, rayDirection);
+    float twoB = b + b;
+    float discriminant = (distanceSq - radiusSq) * -4.0f + twoB * twoB;
+    if (discriminant < 0.0f) {
+        return 0;
+    }
+    float root = (float)sqrt(discriminant);
+    t0 = -(root + twoB) * 0.5f;
+    t1 = 0.5f * (root - twoB);
+    return 2;
+}
+
+bool __stdcall TMath::PointInsideCapsule2D(const TVector2& capsuleStart, const TVector2& capsuleEnd, float radius,
+                                           const TVector2& point)
+{
+    float t = ClosestPointOnLine2D(capsuleStart, capsuleEnd, point);
+    Clip(t, 0.0f, 1.0f);
+    TVector2 closest;
+    closest.Lerp(capsuleStart, capsuleEnd, t);
+    TVector2 delta = closest - point;
+    return delta.MagnitudeSq() <= radius * radius;
+}
+
+// Intersects two infinite lines; s and t are the parameters along a->b and c->d of the crossing point.
+bool __stdcall TMath::LineVsLine2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, float& s, float& t)
+{
+    TVector2 ab = b;
+    TVector2 cd = d;
+    ab.Subtract(a);
+    cd.Subtract(c);
+    float determinant = cd.y * ab.x - cd.x * ab.y;
+    if (determinant != 0.0f) {
+        TVector2 ca = a;
+        ca.Subtract(c);
+        float inverse = 1.0f / determinant;
+        s = (cd.x * ca.y - cd.y * ca.x) * inverse;
+        t = (ca.y * ab.x - ca.x * ab.y) * inverse;
+        return true;
+    }
+    return false;
+}
+
+bool __stdcall TMath::LineSegmentVsLineSegment2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, TVector2& hit)
+{
+    float s;
+    float t;
+    if (LineVsLine2D(a, b, c, d, s, t) && 0.0f <= s && 0.0f <= t && s <= 1.0f && t <= 1.0f) {
+        hit = b;
+        hit.Subtract(a);
+        hit.Multiply(s);
+        hit.Add(a);
+        return true;
+    }
+    return false;
+}
+
+float __stdcall TMath::ClosestPointOnLineOverTime2D(const TVector2& a, const TVector2& b, const TVector2& c, const TVector2& d, float time)
+{
+    TVector2 ab = b;
+    ab.Subtract(a);
+    TVector2 negated = ab;
+    negated.Negate();
+    float alongC = TVector2::DotProduct(c, negated);
+    float denominator = ab.MagnitudeSq() * (alongC + time);
+    TVector2 offset = a;
+    offset.Subtract(d);
+    offset.Subtract(b);
+    float alongA = TVector2::DotProduct(a, offset);
+    float alongB = TVector2::DotProduct(b, d);
+    return (time * (alongB + alongA)) / denominator;
+}
+
+// Which part of a capsule a point lies in: 0 = start cap, 1 = middle, 2 = end cap.
+int __stdcall TMath::GetCapsuleZone(const TVector2& point, const TVector2& start, const TVector2& end, float radius)
+{
+    TVector2 axis = end;
+    axis.Subtract(start);
+    if (PointVsPlane2D(axis, end, point)) {
+        return 2;
+    }
+    if (!PointVsPlane2D(axis, start, point)) {
+        return 1;
+    }
+    return 0;
+}
 
 int __stdcall TMath::Sign(int value)
 {

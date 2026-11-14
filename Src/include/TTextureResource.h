@@ -12,6 +12,7 @@ class TRENDER_API TTextureResource : public TResource                   // 0x3c
 {
     TOSHI_DECLARE_CLASS(TTextureResource)
     friend class TTextureFactory;
+    friend class TTextureFactoryHAL;
 public:
     enum ADDRESSMODE { };
     struct LOCKSTATE;
@@ -19,14 +20,15 @@ public:
     TTextureResource();
     virtual ~TTextureResource();
 
-    virtual unsigned int GetWidth() = 0;                                // slot 10
-    virtual unsigned int GetHeight() = 0;                               // slot 11
+    virtual int GetWidth() = 0;                                         // slot 10
+    virtual int GetHeight() = 0;                                        // slot 11
     virtual bool Lock(LOCKSTATE& lockState);                            // slot 12
     virtual void Unlock();                                              // slot 13
 protected:
-    virtual bool Create(void* data, unsigned int dataSize, unsigned int flags,
-                        unsigned int width, unsigned int height) = 0;   // slot 14 (pure, with a body)
     virtual bool Create(const char* fileName, unsigned int flags) = 0;  // slot 15 (pure, with a body)
+    virtual bool Create(void* data, unsigned int dataSize, unsigned int flags,
+                        unsigned int width, unsigned int height) = 0;   // slot 14 (pure, with a body); overloads take
+                                                                        // their slots in reverse declaration order
     virtual bool CreateEx(void* data, unsigned int dataSize, unsigned int width, unsigned int height,
                           unsigned int mipLevels, TTEXTURERESOURCEFORMAT format,
                           unsigned int flags);                          // slot 16

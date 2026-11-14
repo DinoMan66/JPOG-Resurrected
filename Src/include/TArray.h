@@ -308,6 +308,14 @@ public:
         if (n > 0) m_count = n - 1;
     }
 
+    // Removes element i and moves the later elements down by one
+    void Remove(int i)
+    {
+        for (int n = i; n < m_count - 1; n++)
+            m_data[n] = m_data[n + 1];
+        m_count--;
+    }
+
     int m_grow;        // +0
     int m_count;       // +4
     int m_capacity;    // +8

@@ -12,6 +12,8 @@ public:
     TOSHI_API static float __stdcall ATan(float);
     TOSHI_API static int __stdcall TruncToInt(float);
     TOSHI_API static int __stdcall FloorToInt(float);
+    TOSHI_API static void __stdcall Clip(float&, float, float);
+    TOSHI_API static float __stdcall Gain(float, float);
     template <class T> static const T& Max(const T& a, const T& b) { return (a < b) ? b : a; }
     template <class T> static const T& Min(const T& a, const T& b) { return (b < a) ? b : a; }
 };

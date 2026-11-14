@@ -1,5 +1,5 @@
 // Toshi::TModel / TModelLOD / TModelInstance (TRenderInterface.dll, TModel.cpp, 0x95f0-0x9b90).
-// TModel is abstract: the platform renderer loads the meshes (slot 5, called by LoadTMD).
+// TModel is abstract: the platform renderer loads the meshes (slot 5, LoadTMDHAL, called by LoadTMD).
 #ifndef TMODEL_H
 #define TMODEL_H
 #include "TRenderAPI.h"
@@ -60,13 +60,13 @@ public:
     enum { MAX_LODS = 5 };
     enum FLAGS { FLAG_CREATED = 1, FLAG_LOADED = 2 };
 
-    virtual bool Create(const char* name, bool load) = 0;               // slots 0-3, 5: names unknown
-    virtual void Delete() = 0;
-    virtual void Render() = 0;
-    virtual bool Validate() = 0;
+    virtual bool Create(const char* name, bool load) = 0;               // slot 0
+    virtual void Delete() = 0;                                          // slot 1
+    virtual bool Load(const char* name) = 0;                            // slot 2
+    virtual void Unload() = 0;                                          // slot 3
 protected:
     virtual ~TModel();                                                  // slot 4
-    virtual bool LoadTRB(TFile* file) = 0;                              // slot 5 (meshes, after LoadTMD)
+    virtual bool LoadTMDHAL(TFile* file) = 0;                           // slot 5 (meshes, after LoadTMD)
 
 public:
     TModelInstance* CreateInstance();
@@ -76,7 +76,12 @@ public:
     TModelLOD& GetLOD(int index);
     int GetLODCount();
     int GetInstanceCount();
-    bool IsLoaded();
+    bool IsLoaded()
+    {
+        if (m_uiFlags & FLAG_LOADED)
+            return true;
+        return false;
+    }
     bool IsCreated();
     TSkeleton* GetSkeleton();
     unsigned int GetFlags();

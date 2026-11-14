@@ -24,6 +24,7 @@ public:
     TGUIColour(float red, float green, float blue, float alpha);            // components in 0..1
     TGUIColour(unsigned int argb, FormatARGB format);
     TGUIColour(unsigned int abgr, FormatABGR format);
+    TGUIColour(const TGUIColour& other);
 
     TGUIColour& operator=(const TGUIColour& other)
     {

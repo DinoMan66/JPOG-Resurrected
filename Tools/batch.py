@@ -17,6 +17,16 @@ This is a quick look, not the verdict: it does not count attempts (verdict.py do
 not re-checked, and host builds are never trusted. A function counts only after a VM build and the anti-cheat.
 Needs capstone or GNU objdump, like the other tools.
 """
+import os as _os, sys as _sys
+# Run as `py Tools\\x.py`, Python puts Tools\\ first on the path, and the project's own Tools\\dis.py then hides the
+# standard 'dis' module: capstone (through inspect) fails to load and the tool falls back to objdump. Load the
+# standard modules before Tools\\ can shadow them.
+_sys.path[:] = [_p for _p in _sys.path if _os.path.abspath(_p or ".") != _os.path.dirname(_os.path.abspath(__file__))]
+import inspect, dis  # noqa: E401,F401
+try:
+    import capstone  # noqa: F401
+except Exception:
+    pass
 import argparse, difflib, glob, importlib.util, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))

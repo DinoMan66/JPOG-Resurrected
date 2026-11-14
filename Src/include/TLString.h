@@ -34,7 +34,7 @@ private:
 class TLString
 {
 public:
-    TLString() { m_pData = 0; }
+    TOSHI_EXPORT TLString() { m_pData = 0; }
     TLString(const TLString& o)
     {
         // the binary re-tests the pointer after storing it (see MATCHING_NOTES #6)

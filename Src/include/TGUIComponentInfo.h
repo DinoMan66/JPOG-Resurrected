@@ -25,8 +25,8 @@ public:
     const TPCString& GetComponentName() const;
     const TPCString& GetComponentLabel() const;
     const TClass* GetTClass() const;
-    int GetElementCount() const;
-    const TPCString& GetElementName(int index) const;
+    int GetElementCount() const { return m_aElementNames.Count(); }
+    const TPCString& GetElementName(int index) const { return m_aElementNames[index]; }
 
 private:
     TPCString m_oComponentName;             // +0x0C

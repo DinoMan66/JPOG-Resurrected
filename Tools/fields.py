@@ -23,7 +23,18 @@ through another pointer is missed; sizes come from the instruction (a 4-byte acc
 float moved as an integer). Output is a draft for a header written by hand - never paste it into Src unreviewed.
 Needs capstone or GNU objdump, like the other tools. Idea from decompdecomp's class recovery.
 """
+import os as _os, sys as _sys
+# Run as `py Tools\\x.py`, Python puts Tools\\ first on the path, and the project's own Tools\\dis.py then hides the
+# standard 'dis' module: capstone (through inspect) fails to load and the tool falls back to objdump. Load the
+# standard modules before Tools\\ can shadow them.
+_sys.path[:] = [_p for _p in _sys.path if _os.path.abspath(_p or ".") != _os.path.dirname(_os.path.abspath(__file__))]
+import inspect, dis  # noqa: E401,F401
+try:
+    import capstone  # noqa: F401
+except Exception:
+    pass
 import argparse, collections, csv, glob, os, re, struct, subprocess, sys, tempfile
+CAPSTONE_ERROR = None      # why capstone could not be used (shown by the tools that fall back to objdump)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -48,8 +59,10 @@ class Image:
         try:
             import capstone
             self.cs = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
-        except Exception:
+        except Exception as ex:
             self.cs = None
+            global CAPSTONE_ERROR
+            CAPSTONE_ERROR = f"{type(ex).__name__}: {ex}"
         self.cache = {}
 
     def off(self, va):
@@ -76,6 +89,9 @@ class Image:
             try:
                 txt = subprocess.run(["objdump", "-D", "-b", "binary", "-m", "i386", "-M", "intel", "-w",
                                       f"--adjust-vma={va:#x}", tmp], capture_output=True, text=True).stdout
+            except FileNotFoundError:
+                raise FileNotFoundError("neither capstone nor objdump can be used. capstone: "
+                                        + (CAPSTONE_ERROR or "not installed (py -m pip install capstone)")) from None
             finally:
                 os.unlink(tmp)
             rows = []

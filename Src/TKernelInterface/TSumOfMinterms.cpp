@@ -1,8 +1,9 @@
 // Z:\Toshi\Source\TKernel\TMinterm.cpp - TSumOfMinterms (sum of products over a bit mask of inputs).
-// Not written: MakeFunctionString (two overloads) and ParseFunctionString.
+// Not written: the TCString overload of MakeFunctionString and ParseFunctionString.
 #define TOSHI_API __declspec(dllexport)
 #define SETCAP 6    // TArray::SetCapacity with new[]/delete[] (see include\TArray.h)
 #include "TNewDelete.h"
+#include "TKernelMisc.h"
 #include "TKernelLogic.h"
 
 namespace Toshi {
@@ -55,6 +56,13 @@ bool TSumOfMinterms::GetTruth(unsigned int input)
         }
     }
     return false;
+}
+
+TPCString TSumOfMinterms::MakeFunctionString(const char** const symbols, const TArray<TPCString>& variableNames) const
+{
+    TCString text;
+    MakeFunctionString(text, symbols, variableNames);
+    return TSystem::GetCStringPool()->Get(text);
 }
 
 } // namespace Toshi

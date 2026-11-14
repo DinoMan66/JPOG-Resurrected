@@ -19,9 +19,12 @@ public:
     virtual ~TGUIWindow();
 
     virtual TClass& GetClass() const;                           // slot 0
+    virtual bool Deserialise(const PProperties* properties);    // slot 3
+    virtual bool Serialise(PProperties* properties);            // slot 4
     virtual bool AcceptsFocus() const { return m_pDefaultFocus != 0; }  // slot 16
 
 protected:
+    TGUIWindow(const TGUIWindow& other);
     virtual const TArray<TGUIPropertySpec*>* GetPropertyInfoSet() const { return ms_oPropertySet; }    // slot 11
     // slot 12
     virtual const TSortedArray<TGUIPropertySpec*, TGUIPropertySpec::Comparator>* GetPropertyInfoOrderedSet() const
@@ -37,7 +40,9 @@ public:
     void SetDefaultFocus(TGUIWidget* widget);
 
     // set from the "default_focus" property, which names the child
+    bool Val_default_focus_property(const PPropertyValue& value);
     void Set_default_focus_property(const PPropertyValue& value);
+    PPropertyValue Get_default_focus_property() const;
 
     static TClass m_sClass;
 

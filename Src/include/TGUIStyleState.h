@@ -13,13 +13,24 @@ namespace Toshi {
 class TGUI_API TGUIStyleState : public TNodeList<TGUIStyleState>::TNode
 {
 public:
-    explicit TGUIStyleState(const TGUIStateRule& rule);
+    explicit TGUIStyleState(const TGUIStateRule& rule)
+        : m_oRule(rule)
+    {
+    }
     TGUIStyleState(const TGUIStyleState& other);
 
     void AddComponent(TGUIComponent* component) { m_oComponents.InsertTail(component); }
     TNodeList<TGUIComponent>& GetComponents();
     void SetStateRule(const TGUIStateRule& rule);
     void GetStateRule(TGUIStateRule& rule) const;
+    bool AppliesTo(unsigned int stateBits) const
+    {
+        return (stateBits & m_oRule.m_unk00) == m_oRule.m_unk04;
+    }
+    bool HasStateRule(const TGUIStateRule& rule) const
+    {
+        return m_oRule == rule;
+    }
 
 private:
     TGUIStateRule m_oRule;                      // +0x0C

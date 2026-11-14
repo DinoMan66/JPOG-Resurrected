@@ -9,6 +9,7 @@
 #include "TObject.h"
 #include "TNodeList.h"
 #include "TGUIMemory.h"
+#include "TPString.h"
 
 class PProperties;
 class PPropertyValue;
@@ -48,6 +49,10 @@ protected:
 public:
     virtual void NotifyElementsChanged();                                               // slot 10
     virtual void DestroyCache(void* cache) const;                                       // slot 11
+
+    TGUIElement& GetElement(int index);
+    TGUIElement& GetElement(const TPCString& name);
+    int FindElementName(const TPCString& name) const;
 
     void GetMargins(int& left, int& right, int& top, int& bottom);
     void SetMargins(int left, int right, int top, int bottom);

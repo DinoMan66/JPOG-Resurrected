@@ -18,7 +18,7 @@ TGUIHorizontalTripletComponent::~TGUIHorizontalTripletComponent()
 {
 }
 
-TGUIComponent* TGUIHorizontalTripletComponent::Clone() const
+TGUIHorizontalTripletComponent* TGUIHorizontalTripletComponent::Clone() const
 {
     return new TGUIHorizontalTripletComponent(*this);
 }

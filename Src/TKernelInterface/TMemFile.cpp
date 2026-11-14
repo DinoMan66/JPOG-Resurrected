@@ -1,18 +1,11 @@
 // Z:\Toshi\Source\TKernel\TMemFile.cpp - constructor/destructor and a few members of the memory file, and TMemFileSystem.
 // These live in their own translation unit in the binary (TFile's constructor is called, not inlined).
 #define TOSHI_API __declspec(dllexport)
-#include <new.h>
+#include "TNewDelete.h"
 #include "TKernelFileManager.h"
 #include "TMemory.h"
 
 namespace Toshi {
-
-TMemFile::TMemFile(TMemFileSystem* fileSystem) : TFile(fileSystem)
-{
-    m_pBuffer = 0;
-    m_pCursor = 0;
-    m_iSize = 0;
-}
 
 TMemFile::~TMemFile()
 {
@@ -67,34 +60,24 @@ TMemFileSystem::~TMemFileSystem()
 
 TFile* TMemFileSystem::CreateFile(const TCString& path, unsigned int flags)
 {
-    void* memory = tmalloc(sizeof(TMemFile), 0, -1);
-    TMemFile* file;
-    if (memory == 0) {
-        file = 0;
-    } else {
-        file = new (memory) TMemFile(this);
-    }
+    TMemFile* file = new TMemFile(this);
     if (file != 0) {
         if (file->Open(path, flags)) {
             return file;
         }
+        delete file;
     }
     return 0;
 }
 
 TFile* TMemFileSystem::CreateFile(TFile* source)
 {
-    void* memory = tmalloc(sizeof(TMemFile), 0, -1);
-    TMemFile* file;
-    if (memory == 0) {
-        file = 0;
-    } else {
-        file = new (memory) TMemFile(this);
-    }
+    TMemFile* file = new TMemFile(this);
     if (file != 0) {
         if (file->Open(source)) {
             return file;
         }
+        delete file;
     }
     return 0;
 }

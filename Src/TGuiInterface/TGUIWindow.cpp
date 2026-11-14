@@ -28,9 +28,33 @@ void TGUIWindow::SetDefaultFocus(TGUIWidget* widget)
     m_pFocus = widget;
 }
 
+// The property is valid when it is empty or names a child of the window
+bool TGUIWindow::Val_default_focus_property(const PPropertyValue& value)
+{
+    if (!value.CanBeType(PPropertyValue::TYPE_TPCSTRING)) {
+        return false;
+    }
+    if (value.GetTPCString().IsEmpty()) {
+        return true;
+    }
+    if (FindNamedChild(value.GetTPCString()) != 0) {
+        return true;
+    }
+    return false;
+}
+
 void TGUIWindow::Set_default_focus_property(const PPropertyValue& value)
 {
     m_pDefaultFocus = FindNamedChild(value.GetTPCString());
+}
+
+// The property names the default focus child, empty when there is none
+PPropertyValue TGUIWindow::Get_default_focus_property() const
+{
+    if (m_pDefaultFocus != 0) {
+        return PPropertyValue(m_pDefaultFocus->GetName());
+    }
+    return PPropertyValue(TPCString());
 }
 
 void TGUIWindow::NotifyFocusGained(TGUIWidget* from, TGUIWidget* to)

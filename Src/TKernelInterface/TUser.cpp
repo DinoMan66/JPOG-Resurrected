@@ -137,6 +137,11 @@ TRefCounted::~TRefCounted()
 {
 }
 
+TRefCounted& TRefCounted::operator=(const TRefCounted& other)
+{
+    return *this;
+}
+
 int TRefCounted::IncRefCount(void* owner)
 {
     return ++m_iRefCount;

@@ -164,4 +164,16 @@ TWString __stdcall operator+(const TWChar* a, const TWString& b)
     return result;
 }
 
+// ---- TWString
+
+void TWString::Copy(const TCString& s, int len)
+{
+    if (len > s.Length() || len == -1) {
+        len = s.Length();
+    }
+    AllocBuffer(len, true);
+    TSystem::StringCharToUnicode(m_pBuffer, (const char*)s, len);
+    m_pBuffer[len] = 0;
+}
+
 } // namespace Toshi

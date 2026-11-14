@@ -13,25 +13,31 @@ namespace Toshi {
 class TGUI_API TGUITextureAnimation : public TGUITextureSection
 {
 public:
-    // One step of the animation, 8 bytes; the members are not known yet
+    // One step of the animation, 8 bytes
     class Frame
     {
     public:
-        /* 0x00 */ int m_unk00;
-        /* 0x04 */ int m_unk04;
+        // the frame's bounding box, as GetBBox and SetBBox read and write it
+        unsigned short m_usX;           // +0x00
+        unsigned short m_usY;           // +0x02
+        unsigned short m_usWidth;       // +0x04
+        unsigned short m_usHeight;      // +0x06
     };
 
     TGUITextureAnimation();
     virtual ~TGUITextureAnimation();
 
     virtual TClass& GetClass() const;
-    virtual TGUITextureSection* Clone() const;
+    virtual TGUITextureAnimation* Clone() const;
     virtual void GetBBox(unsigned short& x, unsigned short& y, unsigned short& width, unsigned short& height,
                          float scale) const;
     virtual void GetBBox(unsigned short& x, unsigned short& y, unsigned short& width, unsigned short& height,
                          int frame) const;
     virtual void SetBBox(unsigned short x, unsigned short y, unsigned short width, unsigned short height,
                          int frame);
+
+    void RemoveFrame(int number);
+    void InsertFrame(int number, Frame& frame);
 
     // frames are counted from 1
     Frame& GetFrame(int number) { return m_oFrames[number - 1]; }
@@ -40,6 +46,9 @@ public:
     float GetFrequency() const { return m_fFrequency; }
 
     static TClass m_sClass;
+
+protected:
+    TGUITextureAnimation(const TGUITextureAnimation& other);
 
 private:
     static TObject* __stdcall CreateObject();

@@ -2,6 +2,8 @@
 #ifndef TKERNELTHREADS_H
 #define TKERNELTHREADS_H
 #include <windows.h>
+// windows.h renames CreateFile to CreateFileA; the Toshi file system methods are recorded (exported) as CreateFile.
+#undef CreateFile
 
 namespace Toshi {
 

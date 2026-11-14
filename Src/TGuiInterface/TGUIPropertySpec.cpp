@@ -32,6 +32,16 @@ const TPCString& TGUIPropertySpec::GetEnumName(int index) const
     return m_aEnumNames[index];
 }
 
+int TGUIPropertySpec::GetEnumValue(const TPCString& name) const
+{
+    for (int i = 0; i < m_iEnumCount; i++) {
+        if (m_aEnumNames[i] == name) {
+            return i;
+        }
+    }
+    return -1;
+}
+
 int TGUIPropertySpec::GetEnumCount() const
 {
     if (m_iKind == KIND_ENUMERATION) {

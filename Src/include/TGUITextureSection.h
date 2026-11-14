@@ -21,7 +21,13 @@ public:
     virtual TClass& GetClass() const;                           // slot 0
     virtual TGUITextureSection* Clone() const;                  // slot 3
     virtual void GetBBox(unsigned short& x, unsigned short& y, unsigned short& width, unsigned short& height,
-                         float scale) const;                    // slot 5
+                         float scale) const                     // slot 5
+    {
+        x = m_usX;
+        y = m_usY;
+        width = m_usWidth;
+        height = m_usHeight;
+    }
     virtual void GetBBox(unsigned short& x, unsigned short& y, unsigned short& width, unsigned short& height,
                          int frame) const                       // slot 4
     {
@@ -39,6 +45,8 @@ public:
         m_usHeight = height;
     }
 
+    void Set(short texture, const TPCString& name, int x, int y, int width, int height, int rotation, bool wrap,
+             bool mirrorX, bool mirrorY);
     void SetMirrorY(bool mirror) { m_bMirrorY = mirror; }
     void SetMirrorX(bool mirror) { m_bMirrorX = mirror; }
     void SetWrap(bool wrap) { m_bWrap = wrap; }
@@ -58,6 +66,7 @@ public:
     unsigned short GetY() const { return m_usY; }
     unsigned short GetX() const { return m_usX; }
     const TPCString& GetName() const { return m_oName; }
+    void SetName(const TPCString& name) { m_oName = name; }
 
     static TClass m_sClass;
 

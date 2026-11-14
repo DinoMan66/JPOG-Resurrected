@@ -1,0 +1,14 @@
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+??4?$TArray@VTMinterm@Toshi@@@Toshi@@QAEXABV01@@Z = 0x1f2a0
+??_C@_07A@?$CDMB_uID?$AA@ = 0x45f20
+?CreateFileA@TFileManager@Toshi@@QAEPAVTFile@2@ABVTCString@2@I@Z = 0xb360
+?m_bEnableDebugFile@TDebug@Toshi@@0_NA = 0x43a28
+?m_pDebugFile@TDebug@Toshi@@0PAVTFile@2@A = 0x43a2c
+?ms_aScratchMem@TSystem@Toshi@@2PAEA = 0x433c0
+_fmod = 0x29478
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+??_C@_01A@?1?$AA@ = 0x44160
+?ms_bPaused@TProfiler@Toshi@@0_NA = 0x41610
+?ms_pFirst@TProfiler@Toshi@@0PAV12@A = 0x43094
+# ---- mapsuggest.py: confirmed by two or more matched functions each
+??0TGenericEmitter@Toshi@@QAE@PAX@Z = 0xb2b0

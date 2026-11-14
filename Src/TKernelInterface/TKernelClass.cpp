@@ -173,4 +173,24 @@ const TClass* TClass::FindRecurse(const char* name, const TClass* cls, bool sibl
     return 0;
 }
 
+// Visits every descendant of this class: onVisit for each one, and onEnter / onLeave around the
+// descendants of a class that has any.
+void TClass::RecurseTree2(TreeFn onEnter, TreeFn onLeave, TreeFn onVisit, void* data)
+{
+    for (TClass* child = m_pFirstChild; child != 0; child = child->m_pNextSibling) {
+        if (onVisit != 0) {
+            onVisit(child, data);
+        }
+        if (child->m_pFirstChild != 0) {
+            if (onEnter != 0) {
+                onEnter(this, data);
+            }
+            child->RecurseTree2(onEnter, onLeave, onVisit, data);
+            if (onLeave != 0) {
+                onLeave(this, data);
+            }
+        }
+    }
+}
+
 } // namespace Toshi

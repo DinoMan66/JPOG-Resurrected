@@ -18,7 +18,7 @@ TGUIIconComponent::~TGUIIconComponent()
 {
 }
 
-TGUIComponent* TGUIIconComponent::Clone() const
+TGUIIconComponent* TGUIIconComponent::Clone() const
 {
     return new TGUIIconComponent(*this);
 }

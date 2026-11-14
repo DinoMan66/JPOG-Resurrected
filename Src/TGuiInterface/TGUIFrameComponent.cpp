@@ -19,7 +19,7 @@ TGUIFrameComponent::~TGUIFrameComponent()
 {
 }
 
-TGUIComponent* TGUIFrameComponent::Clone() const
+TGUIFrameComponent* TGUIFrameComponent::Clone() const
 {
     return new TGUIFrameComponent(*this);
 }

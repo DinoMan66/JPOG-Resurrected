@@ -15,7 +15,7 @@ public:
     virtual ~TGUITextComponent();
 
     virtual TClass& GetClass() const;
-    virtual TGUIComponent* Clone() const;
+    virtual TGUITextComponent* Clone() const;
     virtual bool GetPreferredSize(PPropertyValue* value, int& width, int& height,
                                   short maxWidth, short maxHeight) const;
     virtual TGUIElement* GetElements();

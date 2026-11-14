@@ -4,8 +4,8 @@ A work-in-progress **matching decompilation** of *Jurassic Park: Operation Genes
 Entertainment / Universal Interactive) for PC: the Toshi engine DLLs and the game itself, `SimJP.exe`.
 
 Hello everyone. This is my first decompilation project. While ZT1 Open Source was published first, I started game decompilation here, with Jurassic Park Operation Genesis, one of my favorite games ever. I'm new to the decompilation scene and am still trying to improve my set up. Bear with me while I get the hang of things.
-The reason why I've named this decompilation JPOG Revival is because I hope to revive this classic game and get it running on modern systems, implement several new features, and add back cut content. I'm aware that it may not be possible for me to fully decompile JPOG since the compiler it was built with was of a different build to the one that I'm using (JPOG was compiled with build 020125Z, the compiler I'm using is build 010525Z), but I intend to do eveything I can to decompile the game into human readable source code. I'll consider the project finished once I've used up every option I've got to make a matching decompilation of JPOG.
-*Has nothing to do with the JPOG Revival series of mods for Jurassic World Evolution 3.
+The reason why I've named this decompilation JPOG Resurected is because I hope to resurrect this classic game and get it running on modern systems, implement several new features, and add back cut content. I'm aware that it may not be possible for me to fully decompile JPOG since the compiler it was built with was of a different build to the one that I'm using (JPOG was compiled with build 020125Z, the compiler I'm using is build 010525Z), but I intend to do eveything I can to decompile the game into human readable source code. I'll consider the project finished once I've used up every option I've got to make a matching decompilation of JPOG.
+*Rebranded to JPOG Resurrected to be more separable from the JPOG Revival series of mods for Jurassic World Evolution 3.
 
 The goal is readable C++ source that, compiled with Intel C++ 5.0.1, produces **the same machine code as the
 original, function by function**. A function only counts when it compiles to identical instructions *and*
@@ -21,13 +21,13 @@ Progress is measured by an independent verification tool, never by hand
 The table below is rewritten by that tool after every session.
 
 <!-- status:start -->
-Verified by the independent checker on 2026-11-11 (tools intact: yes, rule violations: 0). Only the first row counts as reconstruction.
+Verified by the independent checker on 2026-11-13 (tools intact: yes, rule violations: 0). Only the first row counts as reconstruction.
 
 | | Functions | Share of 20,432 |
 |---|---:|---:|
-| Readable reconstruction (matched, real names) | 2,454 | 12.0% |
+| Readable reconstruction (matched, real names) | 3,302 | 16.2% |
 | Matched, honest placeholder names (to be documented) | 0 | 0.0% |
-| Written but not matching yet | 272 | 1.3% |
+| Written but not matching yet | 466 | 2.3% |
 <!-- status:end -->
 
 The 20,432 functions cover all 18 DLLs (6,768 functions) **and** `SimJP.exe` (13,664 functions);

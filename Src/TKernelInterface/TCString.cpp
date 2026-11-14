@@ -191,6 +191,13 @@ bool TWString::IsEmpty() const
     return false;
 }
 
+// Debug helper: converts the text into the shared scratch buffer so a debugger can show it as plain characters.
+const TWString& TWString::Print() const
+{
+    TSystem::StringUnicodeToChar(TSystem::GetTempCString(), GetString(0), 0x400);
+    return *this;
+}
+
 bool TWString::IsIndexValid(int i) const
 {
     if (i > (int)m_iStrLen || i < 0) {
@@ -467,6 +474,21 @@ int TWString::Find(TWChar c, int start) const
     return result;
 }
 
+int TWString::Find(const TWChar* s, int start) const
+{
+    if (!IsIndexValid(start)) {
+        return -1;
+    }
+    wchar_t* found = wcsstr((wchar_t*)(GetString(0) + start), (const wchar_t*)s);
+    int result;
+    if (found == 0) {
+        result = -1;
+    } else {
+        result = ((int)found - (int)GetString(0)) >> 1;
+    }
+    return result;
+}
+
 void TWString::Truncate(int len)
 {
     int oldLen = m_iStrLen;
@@ -507,6 +529,22 @@ void TWString::Copy(const TWChar* s, int len)
     }
     AllocBuffer(len, true);
     wcsncpy((wchar_t*)m_pBuffer, (const wchar_t*)s, len);
+    m_pBuffer[len] = 0;
+}
+
+void TWString::Copy(const char* s, int len)
+{
+    int srcLen;
+    if (s == 0) {
+        srcLen = 0;
+    } else {
+        srcLen = strlen(s);
+    }
+    if (len > srcLen || len == -1) {
+        len = srcLen;
+    }
+    AllocBuffer(len, true);
+    TSystem::StringCharToUnicode(m_pBuffer, s, len);
     m_pBuffer[len] = 0;
 }
 

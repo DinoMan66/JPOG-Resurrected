@@ -32,15 +32,16 @@ class __declspec(dllexport) TUserHandler
 public:
     enum { MAX_USERS = 50 };
 
-    TUserHandler();
-    ~TUserHandler() {}
-
     short RegisterUser(TUser& user);
     void DeregisterUser(TUser& user);
     TUser* FindUser(const char* name);
     TUser* GetUser(int index);
     int GetUserCount();
     static TUserHandler& __stdcall GetSingleton();
+
+protected:
+    TUserHandler();
+    ~TUserHandler() {}
 
 private:
     friend class TUser;

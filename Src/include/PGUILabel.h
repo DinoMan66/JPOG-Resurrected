@@ -1,0 +1,28 @@
+// PGUILabel (PGUICore.dll): a widget that shows a piece of text. Only the accessors are written so far.
+#ifndef PGUILABEL_H
+#define PGUILABEL_H
+#include "PGUIAPI.h"
+#include "TGUIWidget.h"
+
+class PGUI_API PGUILabel : public Toshi::TGUIWidget
+{
+public:
+    static const Toshi::TGUIWidgetInfo* GetStaticWidgetInfo();
+    virtual void Pack();                                                // slot 33
+    virtual bool Deserialise(const PProperties* properties);     // slot 3
+    virtual bool Serialise(PProperties* properties);             // slot 4
+
+    virtual PGUILabel* Clone() const;                                  // slot 13
+
+protected:
+    PGUILabel(const PGUILabel& other);
+    virtual const Toshi::TArray<Toshi::TGUIPropertySpec*>* GetPropertyInfoSet() const;      // slot 11
+    virtual const Toshi::TSortedArray<Toshi::TGUIPropertySpec*, Toshi::TGUIPropertySpec::Comparator>* GetPropertyInfoOrderedSet() const;   // slot 12
+
+private:
+    static Toshi::TGUIWidgetInfo* ms_widget_info;
+    static Toshi::TSortedArray<Toshi::TGUIPropertySpec*, Toshi::TGUIPropertySpec::Comparator>* ms_oPropertySetOrdered;
+    static Toshi::TArray<Toshi::TGUIPropertySpec*>* ms_oPropertySet;
+};
+
+#endif

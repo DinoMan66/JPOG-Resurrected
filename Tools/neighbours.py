@@ -20,6 +20,16 @@ the share of instructions in the longest common blocks (1.0 = the same shape). A
 same way", not "the same function": read the neighbour's source, then write the target in its own terms.
 Needs capstone or GNU objdump, like the other tools.
 """
+import os as _os, sys as _sys
+# Run as `py Tools\\x.py`, Python puts Tools\\ first on the path, and the project's own Tools\\dis.py then hides the
+# standard 'dis' module: capstone (through inspect) fails to load and the tool falls back to objdump. Load the
+# standard modules before Tools\\ can shadow them.
+_sys.path[:] = [_p for _p in _sys.path if _os.path.abspath(_p or ".") != _os.path.dirname(_os.path.abspath(__file__))]
+import inspect, dis  # noqa: E401,F401
+try:
+    import capstone  # noqa: F401
+except Exception:
+    pass
 import argparse, csv, difflib, glob, importlib.util, os, re, struct, sys
 from collections import Counter
 

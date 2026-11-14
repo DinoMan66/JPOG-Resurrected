@@ -225,4 +225,13 @@ void* TMemory::Recalloc(void* address, unsigned int size, MemBlock* block)
     return 0;
 }
 
+// Walks every memory block with the process mutex held.
+void __stdcall TMemory::MemRecurse(void (__stdcall* nodeFunc)(MemNode*),
+                                   void (__stdcall* blockFunc)(MemBlock*, MemInfo*, unsigned int),
+                                   MemBlock* block)
+{
+    TMutexLock lock(s_pMutex);
+    MemRecurseR(nodeFunc, blockFunc, block, 0);
+}
+
 } // namespace Toshi

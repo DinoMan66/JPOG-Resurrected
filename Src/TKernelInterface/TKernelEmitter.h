@@ -44,5 +44,14 @@ private:
     void* m_pOwner;                         // +0x08
 };
 
+// The typed front end: an emitter owned by an Owner that throws Event values.
+template <class Owner, class Event>
+class TEmitter : public TGenericEmitter
+{
+public:
+    TEmitter(Owner* owner) : TGenericEmitter(owner) {}
+    void Throw(Event& event) { TGenericEmitter::Throw(&event); }
+};
+
 } // namespace Toshi
 #endif

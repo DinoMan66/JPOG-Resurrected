@@ -3,6 +3,7 @@
 #ifndef TKERNELLOGIC_H
 #define TKERNELLOGIC_H
 #include "TArray.h"
+#include "TPString.h"
 
 namespace Toshi {
 
@@ -25,6 +26,8 @@ public:
     }
     bool operator==(const TMinterm& other);
     bool GetTruth(unsigned int input) { return (m_uMask & input) == m_uValue; }
+    TPCString MakeFunctionString(const char** const symbols, const TArray<TPCString>& variableNames) const;
+    void MakeFunctionString(TCString& result, const char** const symbols, const TArray<TPCString>& variableNames) const;
 
 private:
     unsigned int m_uMask;   // +0 inputs that matter
@@ -32,7 +35,7 @@ private:
 };
 
 // A boolean function as a sum (OR) of minterms. An empty sum is true.
-// Not declared yet: MakeFunctionString (two overloads) and ParseFunctionString.
+// Not declared yet: ParseFunctionString.
 class __declspec(dllexport) TSumOfMinterms
 {
 public:
@@ -44,6 +47,8 @@ public:
     TSumOfMinterms& operator=(const TSumOfMinterms& other);
     TSumOfMinterms& operator+(const TMinterm& term);    // appends the term to this sum and returns it
     bool GetTruth(unsigned int input);
+    TPCString MakeFunctionString(const char** const symbols, const TArray<TPCString>& variableNames) const;
+    void MakeFunctionString(TCString& result, const char** const symbols, const TArray<TPCString>& variableNames) const;
 
 private:
     TArray<TMinterm> m_aTerms;  // +0x00 (grow, count, capacity, data)

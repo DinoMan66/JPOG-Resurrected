@@ -39,7 +39,7 @@ public:
 #endif
     TOSHI_API float CrossProduct(const TVector2&) const;
     TOSHI_API float DotProduct(const TVector2&) const;
-    void Set(float _x, float _y) { x = _x; y = _y; }
+    TOSHI_EXPORT void Set(float _x, float _y) { x = _x; y = _y; }
     TOSHI_API bool operator!=(const TVector2&) const;
     TOSHI_API bool operator==(const TVector2&) const;
     TOSHI_API TVector2& operator/=(float);
@@ -55,7 +55,7 @@ public:
 #ifndef TVECTOR_IMPLICIT_COPY
     TVector2(const TVector2& o) { x = o.x; y = o.y; }
 #endif
-    TVector2() {}
+    TOSHI_EXPORT TVector2() {}
     TOSHI_API void Normalise();
     TOSHI_API bool IsNormalised(float) const;
     TOSHI_API static float __stdcall Distance(const TVector2&, const TVector2&);
@@ -113,7 +113,7 @@ public:
     TVector3& operator=(const TVector3& o) { x = o.x; y = o.y; z = o.z; return *this; }
 #endif
     TOSHI_API float DotProduct(const TVector3&) const;
-    void Set(float _x, float _y, float _z) { x = _x; y = _y; z = _z; }
+    TOSHI_EXPORT void Set(float _x, float _y, float _z) { x = _x; y = _y; z = _z; }
     TOSHI_API bool operator!=(const TVector3&) const;
     TOSHI_API bool operator==(const TVector3&) const;
     TOSHI_API TVector3& operator/=(float);
@@ -129,7 +129,7 @@ public:
 #ifndef TVECTOR_IMPLICIT_COPY
     TVector3(const TVector3& o) { x = o.x; y = o.y; z = o.z; }
 #endif
-    TVector3() {}
+    TOSHI_EXPORT TVector3() {}
     TOSHI_API void Abs(const TVector3&);
     TOSHI_API void Add(const TVector3&, const TVector3&);
     TOSHI_API void Subtract(const TVector3&, const TVector3&);
@@ -205,7 +205,7 @@ public:
     TOSHI_API void Negate();
     TOSHI_API void Negate(const TVector4&);
     TOSHI_API void Set(const TVector3&);
-    void Set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
+    TOSHI_EXPORT void Set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
     TOSHI_API bool operator!=(const TVector4&) const;
     TOSHI_API bool operator==(const TVector4&) const;
     TOSHI_API TVector4& operator/=(float);
@@ -221,7 +221,7 @@ public:
 #ifndef TVECTOR_IMPLICIT_COPY
     TVector4(const TVector4& o) { x = o.x; y = o.y; z = o.z; w = o.w; }
 #endif
-    TVector4() {}
+    TOSHI_EXPORT TVector4() {}
     TOSHI_API void Set(const float*const);
     TOSHI_API void Abs(const TVector4&);
     TOSHI_API void Negate4(const TVector4&);
@@ -301,13 +301,13 @@ public:
     TOSHI_API float Magnitude() const;
     TOSHI_API float MagnitudeSq() const;
     TOSHI_API void SetIdentity();
-    void Set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
+    TOSHI_EXPORT void Set(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
 #ifndef TVECTOR_IMPLICIT_COPY
     TQuaternion(const TQuaternion& o) { x = o.x; y = o.y; z = o.z; w = o.w; }
 #endif
     TOSHI_API TQuaternion(const TVector3&, float);
     TQuaternion(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
-    TQuaternion() {}
+    TOSHI_EXPORT TQuaternion() {}
     TOSHI_API TQuaternion& operator*=(const TQuaternion&);
     TOSHI_API TQuaternion& operator*=(float);
     TOSHI_API TQuaternion& operator/=(const TQuaternion&);
@@ -384,10 +384,14 @@ public:
     // No JPOG module imports TSphere's members except ComparePlane/Union (kernel code): the rest is inline.
     TOSHI_API void Union(TSphere&, TSphere&);
     TOSHI_API TPlane::PlaneComparison ComparePlane(TPlane&);
-    TSphere() {}
-    TSphere(const TVector4& v) { m_oSphere = v; }
-    TSphere(const TVector3& c, float r) { m_oSphere.Set(c.x, c.y, c.z, r); }
-    TSphere(float x, float y, float z, float r) { m_oSphere.Set(x, y, z, r); }
+    // Also exported by the kernel (decorated names in the export table): the constructors, the copy constructor
+    // and operator=.
+    TOSHI_EXPORT TSphere() {}
+    TOSHI_EXPORT TSphere(const TSphere& s) { m_oSphere = s.m_oSphere; }
+    TOSHI_EXPORT TSphere(const TVector4& v) { m_oSphere = v; }
+    TOSHI_EXPORT TSphere(const TVector3& c, float r) { *(TVector3*)&m_oSphere = c; m_oSphere.w = r; }
+    TOSHI_EXPORT TSphere(float x, float y, float z, float r) { m_oSphere.Set(x, y, z, r); }
+    TOSHI_EXPORT TSphere& operator=(const TSphere& s) { m_oSphere = s.m_oSphere; return *this; }
     // The kernel exports exactly these inline members (see TSphere.cpp).
     TOSHI_EXPORT void Set(const TSphere& s) { m_oSphere = s.m_oSphere; }
     TOSHI_EXPORT void Set(const TVector4& v) { m_oSphere = v; }
@@ -422,7 +426,7 @@ public:
     TVector3 m_oBounds;         // +0x0C (SetBounds / GetBounds)
 };
 
-class TMatrix44
+class TOSHI_EXPORT TMatrix44
 {
 public:
     TOSHI_API void Identity();

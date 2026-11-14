@@ -3,6 +3,8 @@
 #define TGUIINTERFACE_EXPORTS
 #include <new>
 #include "TGUIElement.h"
+#include "TGUITextureSection.h"
+#include "PPropertyValue.h"
 
 namespace Toshi {
 
@@ -116,6 +118,21 @@ void TGUIElement::Assign(const TGUIElement& other)
 TLString& TGUIElement::GetLabelInternal()
 {
     return Label();
+}
+
+// The kind of value a parameter of this element takes: a texture section or a text
+const TClass* TGUIElement::GetParameterType() const
+{
+    const TClass* type;
+
+    if (m_eType == ELEMENT_TEXTURE) {
+        type = &TGUITextureSection::m_sClass;
+    } else if (m_eType == ELEMENT_TEXT) {
+        type = PPropertyValue::TYPE_TLSTRING;
+    } else {
+        type = PPropertyValue::TYPE_UNDEF;
+    }
+    return type;
 }
 
 int TGUIElement::GetParameterID() const

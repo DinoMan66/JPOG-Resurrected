@@ -1,8 +1,9 @@
 // Z:\Toshi\Source\TGUI - TGUIComponent. The original file name is not in the binary's strings.
-// Deserialise, Serialise, InitialiseStatic, FindElementName, GetElement and the cache are still to do.
+// Deserialise, Serialise, InitialiseStatic and the cache are still to do.
 #define TGUIINTERFACE_EXPORTS
 #include "TGUIComponent.h"
 #include "TGUIElement.h"
+#include "TGUIComponentInfo.h"
 
 namespace Toshi {
 
@@ -53,6 +54,27 @@ void TGUIComponent::CopyElements(TGUIElement* destination, const TGUIElement* so
     for (int i = 0; i < count; i++) {
         destination[i] = source[i];
     }
+}
+
+TGUIElement& TGUIComponent::GetElement(const TPCString& name)
+{
+    return GetElement(FindElementName(name));
+}
+
+TGUIElement& TGUIComponent::GetElement(int index)
+{
+    return GetElements()[index];
+}
+
+// The element names come from the component's info; the result is the index or -1
+int TGUIComponent::FindElementName(const TPCString& name) const
+{
+    for (int i = 0; i < GetComponentInfo()->GetElementCount(); i++) {
+        if (GetComponentInfo()->GetElementName(i) == name) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void TGUIComponent::GetMargins(int& left, int& right, int& top, int& bottom)

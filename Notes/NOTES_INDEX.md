@@ -1,4 +1,4 @@
-# Index of MATCHING_NOTES.md (30 KB, 42 entries)
+# Index of MATCHING_NOTES.md (37 KB, 45 entries)
 
 Made by Tools/notes_index.py - do not edit; re-run it after adding notes. Read an entry with
 `python3 -I Tools/notes_index.py Notes/MATCHING_NOTES.md --show <id or heading words>`.
@@ -46,4 +46,7 @@ Made by Tools/notes_index.py - do not edit; re-run it after adding notes. Read a
 | section | 256-285 | 3.3 KB | Header inlines and call-site evidence (rounds 228-240) - The original's exported copies of header inlines sit together |
 | section | 286-299 | 1.3 KB | GUI property sets and bool spelling (rounds 247-251) - A bool built with branches in the original (`test; |
 | section | 300-307 | 0.7 KB | Inlined null tests and accessor spelling (rounds 252-253) - `if (!p) return empty; |
-| section | 308-318 | 1.1 KB | Re-examination after the Zoo Tycoon findings (rounds 254-257, 2026-11-03) - A base-class pointer conversion (`TGeneric |
+| section | 308-319 | 1.2 KB | Re-examination after the Zoo Tycoon findings (rounds 254-257, 2026-11-03) - A base-class pointer conversion (`TGeneric |
+| section | 320-342 | 2.1 KB | Kernel files, tasks and lexer (rounds 361-382, 2026-11-13) - `<windows.h>` defines `CreateFile` as `CreateFileA`, whic |
+| section | 343-350 | 1.1 KB | PGUICore start, accessor-only classes (rounds 388-400, 2026-11-13) - Accessor-only classes compile fine with offset-na |
+| section | 351-367 | 3.5 KB | PGUICore, widget lists and menu classes (rounds 401-462, 2026-11-13) - TNode/TNodeList offsets: |

@@ -4,11 +4,6 @@
 
 namespace Toshi {
 
-TGUIStyleState::TGUIStyleState(const TGUIStateRule& rule)
-    : m_oRule(rule)
-{
-}
-
 // Deep copy: every component is cloned
 TGUIStyleState::TGUIStyleState(const TGUIStyleState& other)
 {

@@ -5,6 +5,12 @@ preread.py - let the local model pre-read the next functions before a session st
     py Tools\\localai\\preread.py                  the 15 cheapest targets of Tools\\next.py of 64 bytes or more
     py Tools\\localai\\preread.py --top 25 --folder gx      (any next.py filter: --folder, --max-size)
     py Tools\\localai\\preread.py --collect        merge the digests that have arrived into PREREAD.md
+    py Tools\\localai\\preread.py --va 0x4e9989 0x4e9a10        digests of these functions (JPOG: Dll:0xrva) -> out\\pre_<id>.md
+    py Tools\\localai\\preread.py --evidence 0x61f8c0 ...       NAMING EVIDENCE for placeholder-named functions: every
+                       caller's use of it, its strings and callees, at most two name candidates with the lines
+                       that support them -> out\\ev_<id>.md (for documentation rounds)
+A Claude session can ask for any of these without the user: Tools\\queue\\preread_<id>.txt holding the options on
+one line (for example `--evidence 0x61f8c0 0x4d3de0`); watch_ai.py runs it and answers the questions it queues.
 start_local_ai.bat runs the first form automatically, so starting the local model is enough.
 
 For every target it queues one question for watch_ai.py (Tools\\queue\\ask_pre_<target>.json) with the Ghidra C of
@@ -34,6 +40,14 @@ QUESTION = ("This is Ghidra's decompilation of one function (the TARGET, first) 
             "hold, for `this` / param_1 and any other pointer parameter; 3) each call it makes and what the callee "
             "seems to do (one line each); 4) every string or constant that hints at a name, quoted exactly; 5) loops, "
             "switches and early returns. Say 'unknown' instead of guessing names.")
+
+
+EVIDENCE_Q = ("This is Ghidra's decompilation of one function (the TARGET, first), the functions it calls, and the "
+              "places that call it. Collect EVIDENCE for the TARGET's real name; do not invent: 1) what it does in one "
+              "sentence; 2) every string it or its callers use near the call, quoted exactly with its line; 3) what each "
+              "caller does with it (passes what, uses the result how), one line per caller with the line number; 4) at "
+              "most two name candidates, each followed by the exact lines that support it, or 'no evidence' if nothing "
+              "in the text points to a name. A candidate without a supporting line is not allowed.")
 
 
 def c_files():
@@ -94,8 +108,9 @@ def spec_for(path, first, last, limit=MAX_LINES):
     return f"{rel(path)}:{first}-{min(last, first + limit - 1)}"
 
 
-def build_question(t):
+def build_question(t, evidence=False):
     """-> the ask json for one next.py entry, or None when Ghidra has no such function"""
+    ncallers, ctx = (8, 20) if evidence else (2, 12)
     if ZOO:
         path, va = c_files()[0], t["va"]
     else:
@@ -103,13 +118,14 @@ def build_question(t):
     if not path or not os.path.exists(path):
         return None
     by_va = index(path)
-    ident = "pre_" + re.sub(r"[^\w.-]+", "_", t["key"])[:50]
+    ident = ("ev_" if evidence else "pre_") + re.sub(r"[^\w.-]+", "_", t["key"])[:50]
+    question = EVIDENCE_Q if evidence else QUESTION
     if va not in by_va:
         dis = disassembly(t, ident)                  # not in Ghidra's export: give the model the machine code
         if not dis:
             return None
-        return {"id": ident, "question": f"TARGET: {t['name']} at {t['key']} (x86 machine code, Ghidra has no C for it). "
-                + QUESTION, "files": [dis], "max_words": 260}
+        return {"id": ident, "question": f"TARGET: {t.get('name') or 'the function'} at {t['key']} (x86 machine code, Ghidra has no C for it). "
+                + question, "files": [dis], "max_words": 260}
     first, last, gname = by_va[va]
     by_name = {}
     for k, v in by_va.items():
@@ -139,10 +155,24 @@ def build_question(t):
         owner = next((s for s in reversed(starts) if s[0] <= n), None)
         if owner and owner[2] != va and owner[2] not in owners:
             owners.add(owner[2])
-            files.append(f"{rel(path)}:{max(owner[0], n - 15)}-{min(owner[1], n + 10)}")
+            files.append(f"{rel(path)}:{max(owner[0], n - ctx - 3)}-{min(owner[1], n + ctx)}")
             found += 1
-            if found == 2: break
-    return {"id": ident, "question": f"TARGET: {gname} ({t['name']}). " + QUESTION, "files": files, "max_words": 260}
+            if found == ncallers: break
+    if evidence and not found:
+        question += " (No direct caller was found: it is probably called through a vtable or a function pointer.)"
+    return {"id": ident, "question": f"TARGET: {gname} ({t.get('name') or gname}). " + question, "files": files,
+            "max_words": 320 if evidence else 260}
+
+
+def make_target(tok):
+    """'0x4e9989' (Zoo) / 'TKernelInterface:0x141c0' (JPOG) -> a target entry like next.py's"""
+    if ZOO:
+        va = int(tok, 16)
+        return {"key": f"{va:#x}", "va": va, "size": None, "name": ""}
+    if ":" not in tok:
+        raise SystemExit(f"{tok}: JPOG targets are <Dll>:<rva>, e.g. TKernelInterface:0x141c0")
+    dll, r = tok.split(":", 1); rva = int(r, 16)
+    return {"key": f"{dll} {rva:#x}", "va": rva, "dll": dll, "size": 400, "name": ""}
 
 
 def disassembly(t, ident):
@@ -170,6 +200,14 @@ def disassembly(t, ident):
     return rel(out)
 
 
+def has_answer(ident):
+    """a real answer exists (older watchers saved failures as .md too: those do not count)"""
+    p = os.path.join(OUT, ident + ".md")
+    if not os.path.exists(p): return False
+    try: return not open(p, encoding="utf-8", errors="replace").read(200).startswith("<!-- local model: request failed")
+    except OSError: return False
+
+
 def collect(targets):
     L = ["# Pre-read targets", "",
          f"Written {time.strftime('%Y-%m-%d %H:%M')} by Tools/localai/preread.py from Tools/next.py. Digests are hints from "
@@ -179,13 +217,13 @@ def collect(targets):
         p = os.path.join(OUT, ident + ".md")
         L.append(f"## {i}. {t['name']}  ({t['key']}, {t['size']} bytes, cost {t.get('cost', 0):.1f})")
         L.append(f"File: {t.get('file') or '?'}" + (f"   Closest matched: {t['neighbour']} ({t['sim']:.2f})" if t.get("neighbour") else ""))
-        if os.path.exists(p):
+        if has_answer(ident):
             text = open(p, encoding="utf-8", errors="replace").read()
             L += ["", re.sub(r"^<!--.*?-->\n", "", text, flags=re.S).strip(), ""]
         else:
             L += ["", f"(digest not here yet: {ident}.md)", ""]
     open(PLAN, "w", encoding="utf-8", newline="\n").write("\n".join(L) + "\n")
-    have = sum(1 for t in targets if os.path.exists(os.path.join(OUT, "pre_" + re.sub(r"[^\w.-]+", "_", t["key"])[:50] + ".md")))
+    have = sum(1 for t in targets if has_answer("pre_" + re.sub(r"[^\w.-]+", "_", t["key"])[:50]))
     print(f"{PLAN}: {len(targets)} targets, {have} digests")
 
 
@@ -196,8 +234,23 @@ def main():
                     help="smaller functions are cheaper to read directly than through a digest (default 64 bytes)")
     ap.add_argument("--collect", action="store_true", help="only merge the digests that have arrived into PREREAD.md")
     ap.add_argument("--force", action="store_true", help="ask again even when a digest exists")
+    ap.add_argument("--va", nargs="+", metavar="ADDR", help="digests of these functions instead of next.py's list")
+    ap.add_argument("--evidence", nargs="+", metavar="ADDR", help="naming evidence for these (placeholder-named) functions")
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True); os.makedirs(QUEUE, exist_ok=True)
+    if a.va or a.evidence:
+        ev = bool(a.evidence); ids = []; missing = 0
+        for tok in (a.evidence or a.va):
+            q = build_question(make_target(tok), evidence=ev)
+            if q is None:
+                missing += 1; print(f"  {tok}: not in Ghidra's output and no disassembly"); continue
+            if has_answer(q["id"]) and not a.force:
+                ids.append(q["id"] + " (already there)"); continue
+            with open(os.path.join(QUEUE, f"ask_{q['id']}.json"), "w", encoding="utf-8") as f:
+                json.dump(q, f, indent=1)
+            ids.append(q["id"])
+        print(f"{len(ids)} questions -> Tools\\localai\\out\\<id>.md: " + ", ".join(ids) + (f"; {missing} not found" if missing else ""))
+        return
     if a.collect:
         if not os.path.exists(LIST): sys.exit("no target list yet - run preread.py without --collect first")
         collect(json.load(open(LIST, encoding="utf-8"))); return
@@ -215,7 +268,7 @@ def main():
         q = build_question(t)
         if q is None:
             missing += 1; continue
-        if os.path.exists(os.path.join(OUT, q["id"] + ".md")) and not a.force:
+        if has_answer(q["id"]) and not a.force:
             skipped += 1; continue
         with open(os.path.join(QUEUE, f"ask_{q['id']}.json"), "w", encoding="utf-8") as f:
             json.dump(q, f, indent=1)

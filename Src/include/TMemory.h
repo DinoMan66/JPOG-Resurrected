@@ -16,4 +16,22 @@ TOSHI_API void* tmalloc(int size, char* file, int line);
 TOSHI_API void* tcalloc(int count, int size);
 TOSHI_API void  tfree(void* p);
 
+namespace Toshi {
+
+class TMemory
+{
+public:
+    // Video memory counters of the Direct3D device (0x54 bytes). Only the field at +0x28 is read so far.
+    struct HALMemInfo
+    {
+        int m_unk00[10];
+        int m_iUnk28;
+        int m_unk2C[10];
+    };
+
+    TOSHI_API static void __stdcall GetHALMemInfo(HALMemInfo& info);
+};
+
+}
+
 #endif

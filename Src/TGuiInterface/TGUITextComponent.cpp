@@ -18,7 +18,7 @@ TGUITextComponent::~TGUITextComponent()
 {
 }
 
-TGUIComponent* TGUITextComponent::Clone() const
+TGUITextComponent* TGUITextComponent::Clone() const
 {
     return new TGUITextComponent(*this);
 }

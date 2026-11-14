@@ -65,6 +65,10 @@ violation fails the whole check, so there is nothing to gain from any of these:
 | `Notes\COMPILER_LIMITED.md` | Functions that our ICC build 010525Z cannot match. **Never retry these.** |
 | `Notes\function_tracker.csv` | Every exported function of all 19 binaries (18 DLLs + SimJP.exe): dll, rva, size, name, status |
 | `Notes\attempts.csv` | Written by verdict.py: attempts per function, category, status |
+| `Notes\FOR_OPUS.md` | Hard functions handed off by Sonnet sessions; the starting list of Opus sessions |
+| `Notes\WORKFLOW_REFERENCE.md` | Mismatch sessions, permuter, helpers, map entries, improving the setup (full text) |
+| `Notes\HISTORY.md` | Older "Current state" entries |
+| `Notes\FROM_ZOO.md` | Leads from the Zoo Tycoon project to test here: read before parking a wall or filing compiler-limited |
 | `Notes\READABILITY_STANDARD.md` | **What counts as readable source** - every file in Src must meet it |
 | `Notes\READABILITY_REVIEW.md` | 2026-10-27 review: files removed / pending your decision; notes in `Notes\removed\` |
 | `Notes\VERIFIED_PROGRESS.md` | **The only progress numbers to report** (anti-cheat output, honest tiers) |
@@ -80,6 +84,10 @@ violation fails the whole check, so there is nothing to gain from any of these:
    `python3 -I Tools/next.py` (`--folder TKernelInterface`, `--max-size N`) ranks the unwritten functions cheapest first:
    size, naming evidence, how much of the class already matches, named callees, the closest matched neighbour.
    It is an estimate; the generated lists below stay the first stop for trivial bodies and clusters.
+   **Breadth across DLLs:** take the list without `--folder`, so the cheapest functions of every DLL compete. When a
+   DLL's remaining targets mostly need missing pieces (undeclared vtable slots, unknown members, headers that do not
+   exist yet), stop there: put that structural work in `Notes\FOR_OPUS.md` as one line per class and move to the DLL
+   with the next cheapest functions.
 1. **Choose work from `Notes\generated\` first**, before opening Ghidra output:
    - `clusters.md`: "FREE WIN" clusters already have a matched member - copy its source to the others.
      Other clusters: write one function, reuse the shape for the rest.
@@ -100,7 +108,8 @@ violation fails the whole check, so there is nothing to gain from any of these:
    - `HUMAN` = source-type difference that survived 4 attempts: ask the user, don't keep trying.
    Categories: encoding, regalloc, sched, shrink-wrap, inline, fp (compiler-limited after 2 attempts);
    stack (reorder local declarations), branch (swap if/else bodies), outlined (missing `inline`?), source.
-5. Commit back the updated `Notes\function_tracker.csv`, `Notes\attempts.csv`, `Notes\COMPILER_LIMITED.md`.
+5. Commit back the updated `Notes\function_tracker.csv`, `Notes\attempts.csv` and `Notes\COMPILER_LIMITED.md`
+   **after every scored round** (verdict.py writes them on your side; the wall budget and Notes\SESSIONS.csv read them on the PC).
 6. New habits learned -> one numbered line in `MATCHING_NOTES.md`. Keep it short.
 7. End of session: update "Current state" below (numbers + next step). Re-run
    `python3 -I Tools/trivial.py jpog` when many functions changed status.
@@ -127,6 +136,8 @@ These are the only places where `__asm` could be legitimate. Ask the user first.
 ## When a function won't match: classify the wall first (in this order)
 A pinned compiler is deterministic, so a remaining difference means an input differs. Do not call a wall class N
 while class N-1 still diverges (adapted from lemiur's wall-identifier):
+Before parking anything: run `python3 -I Tools/inlinecheck.py` (a callee the original never calls is usually an
+inline there) and check `Notes\FROM_ZOO.md` (what the other project learned about the same kind of wall).
 1. **Referent** - instructions identical, but a call/global/string target differs (symcheck note in verdict.py).
    Fix the identity/label. Never "fix" this with codegen tricks.
 2. **Call set** - the set of out-of-line callees differs (verdict categories `inline` / `outlined`). Usually the
@@ -159,77 +170,85 @@ match (MATCH-PENDING in the anti-cheat report). Use the trick as a clue to the r
 - Tools need `capstone` (pip) or GNU objdump; trivial.py needs `llvm-undname` (Claude's side) or MSVC `undname`
   for signatures - without it, bodies are still generated with decorated names.
 
-## Mismatch sessions (walls)
-A session devoted to functions that are written but do not match. Rules, in this order:
-1. Classify the wall first (section above). Most "compiler" differences are source or build inputs.
-2. **Budget: 6 build rounds per function per session** for a register / schedule wall, 2 real attempts for
-   everything else (verdict.py counts). When it is used up, write the state in `Notes\NOT_MATCHING.md` (what differs, what
-   was tried, the best lead) and take the next function. Only the user can extend a budget, per function.
-   One function must never consume a session: breadth first, the cheap wins of many functions before the last
-   instruction of one.
-3. Never commit a steering construct (rule 7). A probe may use one to learn something; `Src\` keeps the plain form.
-4. Tools, cheapest first: `Notes\NOT_MATCHING.md` and `COMPILER_LIMITED.md` (what is already known), the header-inline
-   and call-site evidence notes (`notes_index.py --show "Header inlines"`), `Tools\varcmp.py` for variants. Our
-   compiler build (010525Z) is older than the game's (020125Z): the "inl" family in NOT_MATCHING.md is that
-   difference and is not worth rounds. Queue commands and flag sweeps need the user's allow file in the VM.
+## Reference sections - read `Notes\WORKFLOW_REFERENCE.md` when the task needs them
+These moved out of this file to keep it short; the full text there is unchanged and still binding. The rules in them:
+- **Mismatch sessions (walls):** classify the wall first; budget 6 build rounds per function per session for a
+  register / schedule wall, 2 real attempts for everything else, then write it up in `Notes\OPEN_WALLS.md` and move on
+  (only the user extends a budget). One function must never consume a session. Never commit a steering construct.
+  Probe sessions need the user (`C:\anticheat_allow_cmd.txt` in the VM): ask first, say which probe and why.
+- **Background permuter:** add each parked near miss (at most 24 bytes differ in batch.py) to `Notes\PERMUTER_TARGETS.txt`;
+  functions further off need a source change, not permutations. The user runs
+  `py Tools\permuter\permute.py --auto 10 --host`. An EXACT result is a candidate: apply it by hand, build, verify.
+  While `Tools\queue\permuter.lock` exists do not queue builds; never touch `Src\zzperm\`.
+- **Helpers:** `neighbours.py <Dll> <name>` before writing a function (a model to follow, not evidence for a name);
+  `fields.py <Dll> <Class>` before a class header (evidence, not a layout to paste); `batch.py` for a quick table (not the
+  verdict); `regress.py --who <header.h>` after a shared header change - the change stays only with no regressions;
+  `inlinecheck.py` for missing inlines. Host builds (`Tools\queue\hostreq_<id>.txt`, `Results_host\`) are for quick
+  iteration only: nothing counts and nothing is reported from them.
+- **Map entries:** `mapsuggest.py`; only CONFIRMED entries (two or more matched functions agree) go into the maps.
+- **Improving the setup:** free tools are edited directly, with a line in `Tools\TOOLS.md` and `Tools\CHANGES.md`, and
+  never write into `Src\`, `Results\`, VERIFIED_PROGRESS.md or verified_functions.csv. Protected tools change only
+  through `Tools\proposed\<name>\` with a PROPOSAL.md; the user runs trial and accept. Never loosen a check to get a
+  function through.
 
-## Background permuter (no usage)
-`Tools\permuter\permute.py <file> <Class::method>` runs on the user's PC: it rewrites one function mechanically
-(statement and declaration order, operand order, comparison and increment spellings), builds the copies in a
-scratch folder `Src\zzperm\` in the VM and scores them. Use it for functions one or two instructions away at the
-register / order level INSTEAD of spending rounds on them:
-- **Overnight:** ask the user to run `py Tools\permuter\permute.py --auto 10 --host` (or without --host): it
-  works through the 10 closest near misses one by one, drops any that turn out not to be near misses, and writes
-  a summary `Notes\permuter\AUTO_<date>.md`. Read the summary first; open a function's report only for EXACT.
-- Ask the user to run it (it takes minutes to hours, unattended). Pick the target with `--list`: it ranks the
-  last build's functions by bytes that differ. Only near misses (a few bytes, same size) are worth a run; a
-  function tens of bytes off needs a source change by hand, not permutations (it warns at the start).
-- Its report is `Notes\permuter\<file>__<function>.md`. An EXACT result is a candidate: apply the diff to the real
-  file yourself, build and verify normally, and check the change reads like something a programmer would write.
-- While `Tools\queue\permuter.lock` exists do not queue builds, and never touch `Src\zzperm\`.
-- With `--host` it builds on the PC through `Tools\hostbuild` (seconds per round, `Results\` untouched).
+## Local model (reads for you) - use it every session
+When `Tools\localai\watch_ai.py` runs on the user's PC (`start_local_ai.bat`), a local model reads project files
+on the PC and writes short answers, so the text never enters your context. Reading is your largest cost; hand
+the model every job below instead of reading the input yourself:
+- **Rule - check before you read.** Before reading any input over about 8 KB yourself (a Ghidra function, notes,
+  a log, a `Notes\removed\` source note), stage `Tools\localai\out\` and use the digest if there is one. If there is
+  none, queue one (`preread_<id>.txt` with `--va ...`, or an `ask_<id>.json`) and work on something else until it
+  arrives. Read the input yourself only when the digest is not enough, and then only the lines it cites.
+- **Automatic:** every build request you queue makes the watcher pre-read that folder's next 12 unwritten
+  functions. Stage `Tools\localai\out\PREREAD.md` after every scored round and take the next batch from it.
+- **Naming evidence (documentation rounds):** commit `Tools\queue\preread_<id>.txt` containing
+  `--evidence TGuiInterface:0x73e0 TGuiInterface:0x7420` (any number of functions). For each it collects every caller's use, the strings
+  and callees, and at most two name candidates with the lines behind them -> `Tools\localai\out\ev_<id>.md`.
+- **Digests of the batch you chose:** `Tools\queue\preread_<id>.txt` with `--va TKernelInterface:0x141c0 ...` (or
+  `--folder <x> --top 20`) -> `Tools\localai\out\pre_<id>.md`. PREREAD.md only covers next.py's own list.
+- **Questions about any large file:** `Tools\queue\ask_<id>.json` (`{"id", "question", "files":
+  ["decompiled/TKernelInterface_inst.dll.c:100-400", "Notes/OPEN_WALLS.md"], "grep": "regex", "around": 12, "max_words": 250}`), e.g.
+  "which functions call FUN_x and with which arguments" over the whole Ghidra file (with `grep`), the long notes
+  in `Notes\removed\*.md`, build logs, MATCHING_NOTES entries beyond what NOTES_INDEX.md says.
+- **Never wait for it.** Queue all requests for the next batch at the start of a build round, then build; read
+  the answers (stage `Tools\localai\out\`) when the round is scored. A digest arrives in about a minute.
+- Answers are hints from a small model: never evidence for a name, a rule or a match, never pasted into `Src\`
+  or the notes. Open the lines they cite (file and line numbers) and use what those lines show.
+- If nothing appears within a few minutes the watcher is not running: carry on without it.
 
-## Helpers for writing and changing code
-- **Before writing a function:** `python3 -I Tools/neighbours.py <Dll> <name or rva>` lists already-matched functions whose original code
-  is most like it, with their source (`--show 2` for more). Copy how they are written (idioms, types, order), not
-  their names - a neighbour is a model to follow, not evidence for a name.
-- **Rounds with many small functions:** `python3 -I Tools/batch.py <folder/file.cpp> ... --results "<staged results>"`
-  gives one line per function instead of reading verdict output function by function. It is a quick look: the
-  verdict that counts is still verdict.py plus the anti-cheat.
-- **Before writing or extending a class header:** `python3 -I Tools/fields.py <Dll> <Class>` lists every
-  offset the class's methods touch through `this` (size, reads, writes, a type guess, which methods) and drafts
-  the `m_unkXX` member list. It is evidence to check against the code, not a layout to paste.
-- **After changing a shared header:** `python3 -I Tools/regress.py --who <header.h>` names the folders to rebuild;
-  after that build, `python3 -I Tools/regress.py "<staged results>"` lists functions that matched at the last
-  anti-cheat run and no longer do. A header change stays only when it reports no regressions.
-- **Host builds** (`Tools\hostbuild`, when the user has set it up): a Claude session may ask for one with
-  `Tools\queue\hostreq_<id>.txt` (`<id> <unix time> <folder>`) and read `Results_host\`. They are for quick
-  iteration only: nothing counts until a normal VM build and the anti-cheat verify it, and progress is never
-  reported from `Results_host\`.
+## No shell in the session? Ask the PC to run the tool
+Some sessions can stage and commit files but cannot run commands. Then every `python3 -I Tools/<tool>.py ...` in
+this file is run by the user's watcher instead: commit `Tools\queue\run_<id>.txt` holding the command on one line
+(e.g. `next.py --top 30 --max-size 400`, `batch.py gx\gxcanvas.cpp --results Results`, `verdict.py ...`), then stage
+`Tools\localai\out\run_<id>.txt` (usually ready within seconds; verdict runs take longer).
+**Batch them:** one file may hold up to 40 commands, one per line (e.g. a `show.py` line for every function of the
+batch); the outputs come back together in one file. One commit and one read instead of forty. It runs on the PC's
+own files, so verdict.py's Notes\attempts.csv is updated there directly and needs no commit back. Only the
+project's own tools run, from the project folder; paths must stay inside the project. If no answer appears within
+a few minutes, the watcher is not running: ask the user to start `Tools\localai\start_local_ai.bat`.
 
-## Local model (reads for you)
-When `Tools\localai\watch_ai.py` is running on the user's PC, a small local model can read project files and
-report back, so the text never enters your context:
-- Commit `Tools\queue\ask_<id>.json` (`{"id", "question", "files": ["Notes/X.md", "decompiled/zoo.exe.c:100-400"],
-  "grep": "regex", "around": 12, "max_words": 250}`), wait for `Tools\localai\out\<id>.md`, stage and read it.
-- Worth it only for input over about 20 KB: long notes, build logs, a large Ghidra function, "which of these files
-  mention X". For anything smaller, or anything `notes_index.py` / grep answers, read it yourself.
-- The answer is a hint from a small model. It can be wrong or incomplete. Never use it as evidence for a name, a
-  rule or a match, never paste its text into `Src\` or the notes; open the lines it cites before acting on them.
-- If no answer appears within a few minutes the watcher is not running: carry on without it, don't wait.
-- **Pre-reading:** `start_local_ai.bat` also runs `Tools\localai\preread.py`, which asks the model for digests of
-  `next.py`'s top targets (what the function does, fields, callees, strings) into `Tools\localai\out\pre_*.md`,
-  listed in `PREREAD.md`. Same rule: a digest saves reading; names, types and layouts still need their evidence.
+## Documentation rounds (placeholders -> readable)
+Matches with honest placeholder names (`vslotNN`, `f<va>`, `m_unkXX`) count as "decompiled, not documented", not
+as readable. Each session, before writing new functions, spend one round promoting them: queue `--evidence` for
+the placeholders in VERIFIED_PROGRESS.md's per-file list, rename those whose evidence holds (name tag as in rule
+7, `// name: caller|string|vtable (confidence)`), rebuild the file and re-verify it. A rename never changes the
+code, so it is the cheapest readable gain there is; leave a placeholder alone when the evidence is thin.
 
-## Unverified references (map entries)
-When VERIFIED_PROGRESS.md reports matched functions with unverified references, run
-`python3 -I Tools/mapsuggest.py` (staged Results with `--results`): it re-compares those functions and lists the
-original's target for each reference whose address is unknown (`Notes\map_suggestions.md`). Only CONFIRMED
-entries (two or more matched functions, all pointing to the same address) go into the maps (`--write` adds them);
-a single reference is not evidence. This raises how much the anti-cheat checks, not the match count.
+## Hand-off to Opus (`Notes\FOR_OPUS.md`)
+Sonnet sessions do breadth: many functions, each cheap. A function that is clearly hard goes to `Notes\FOR_OPUS.md`
+WITHOUT an attempt, so no budget is spent on it. Hand off when any of these holds:
+- original size over 400 bytes (the `size` column of next.py; Sonnet sessions use `next.py --max-size 400`);
+- heavy x87 floating point, or STLport / template-heavy code (several inlined container or string calls);
+- the function belongs to a family that already has an open wall (OPEN_WALLS.md, NOT_MATCHING.md, COMPILER_LIMITED.md);
+- it needs one of the judgement leads in `Notes\FROM_ZOO.md` (inline budget, definition order, out-of-line helpers).
+Also hand off every function you park after using its budget, with what you tried. One line each, format at the top
+of the file. Opus sessions (their prompt says so) work FOR_OPUS.md top to bottom under the same rules and budgets,
+then `next.py --min-size 400`. Never hand off to avoid a cheap function, and never delete someone else's open line.
 
 ## End of every session
-1. Update "Current state" below (numbers from verdict/scoreall only, last build round, next step) and the notes.
+0. Check before you stop: `Notes\attempts.csv` committed after the last scored round; `Notes\PERMUTER_TARGETS.txt`
+   lists this session's near misses; `Notes\FOR_OPUS.md` has a line for every function you handed off or parked; the placeholders you could not name are still placeholders, not guesses.
+1. Update "Current state" below (keep the three newest entries, move older ones to `Notes\HISTORY.md`; numbers from verdict/scoreall only, last build round, next step) and the notes.
 2. Re-run `python3 -I Tools/notes_index.py Notes/MATCHING_NOTES.md` if notes were added, and commit `Notes\NOTES_INDEX.md`.
 3. Update `README.md` in the project folder when something a visitor should know has changed: what is covered,
    new tools, how to build, the layout. Do NOT touch the block between `<!-- status:start -->` and
@@ -241,138 +260,18 @@ a single reference is not evidence. This raises how much the anti-cheat checks, 
    into `public repository` yourself, and never put game files, third-party files or anything about the user's PC
    into `Src\`, `Tools\` or `Notes\` - those folders are published.
 
-## Improving the setup (the tools are meant to grow)
-When the same manual step comes up a third time, a check misses a kind of problem, or a tool's output wastes
-reading, improve the tool or write a new one. That is real progress, not a detour. Two kinds of tools:
-
-| | Free tools | Protected tools (rule 3) |
-|---|---|---|
-| What | everything that helps: analysis, search, ranking, drafting, reports (show, classmap, trivial, ...) and every new helper | what decides whether a function counts: comparison, relocation check, verdicts, build scripts |
-| How to change | edit or create directly, in any session | proposal in `Tools\proposed\<name>\`, the user runs trial + accept |
-
-**Free tools** - keep them honest and findable:
-- A docstring at the top: purpose, usage, inputs, outputs. One line in `Tools\TOOLS.md`; each change one line in
-  `Tools\CHANGES.md` (date, tool, what and why).
-- Output goes to the screen or `Notes\` - never into `Src\` (rule 7), `Results\`, `VERIFIED_PROGRESS.md` or
-  `verified_functions.csv`. A free tool may suggest (rank candidates, draft code you then write by hand, flag
-  problems); whether a function matches is only ever decided by verdict.py / scoreall.py and the anti-cheat.
-- Protected tools must not import a free module (the anti-cheat would then lock it too). Share code by copying
-  it into the protected tool through a proposal, or keep it in the free tool.
-- Try a changed tool on real data (the last build, a known function) before relying on it. Delete experiments you
-  don't keep (list them for the user - you can't delete files on the PC).
-
-**Protected tools** - a proposal is one folder `Tools\proposed\<short-name>\`:
-- The changed or new file(s) laid out as under `Tools\` (`compare.py`, `build_core.bat`, ...). Changes to free
-  tools never go here.
-- `PROPOSAL.md`: first line a one-line title, then *What* changes, *Why* (the problem, with function names and
-  addresses), *Expected effect* (stricter / looser / neutral, and which functions should change verdict) and
-  *Tested* (score the current build with the old and the new version on your side and list the differences).
-- **Stricter** (catches wrong targets, adds a check) is welcome. **Looser** is allowed only when it models
-  something the real toolchain does, with evidence from the original binary (e.g. the post-link optimizer
-  pasting tiny calls into callers); every newly accepted function must be explained. Never loosen a check to get
-  a stuck function through - that is the wall-classification job, not the tool's.
-- Build-script changes can't be tested by the trial (the build runs in the VM): say how to test them.
-- One change per proposal, small enough to read. Not proposable: `Original\`, `Tools\lib\`, the queue, and the
-  anti-cheat itself (it belongs to the user - suggest improvements in words).
-- The user runs `trial`: it shows them the diff, re-verifies every function with both versions and writes
-  `TRIAL.md` into the proposal folder (newly accepted / newly rejected functions). Read it; fix the proposal if
-  the result is not what PROPOSAL.md predicted. After `accept` the proposal moves to `Tools\proposed\accepted\`
-  and `Tools\CHANGES.md` records it. Update this file if the workflow changes.
-
-Ideas you can't do now go to the "Ideas" list at the end of `Tools\TOOLS.md`.
-
-## Current state (2026-10-29, TGuiInterface session, rounds 192-225)
-- **2026-11-10 (setup update).** TGFXFileInstanceObject.cpp: the shader accessors used raw offsets
-  (`*(int*)((char*)this + 0x30)`), now declared members of TGFXInstanceShaderI (m_iTextureStagesState 0x30,
-  m_unk34, m_fAlpha 0x38) - round-258 (TRenderInterface) was queued to confirm that Render still matches; check its
-  result first. New rules: raw offset arithmetic, steering pragmas, `original macro:` evidence for boilerplate
-  macros (the CreateObject / CreateObjectInPlace family is a candidate), notes through Notes\NOTES_INDEX.md,
-  wall budget (section "Mismatch sessions"). Last build round: round-258.
-- **Mismatch clean-up, rounds 228-242 (all DLLs).** scoreall (full build round-241): TKernelInterface 977 -> 1004 matched
-  (24 open, 57 compiler-limited), TGuiInterface 490 -> 504, TRenderInterface 923, PPropertyParser 201, TInputInterface 90,
-  TInputDXInterface 97, TApplication 20; no regressions. scoreall numbers only until the anti-cheat is re-run. Main levers:
-  missing header inlines found from call-site evidence (MATCHING_NOTES "Header inlines and call-site evidence"), TU splits
-  (TKernelDebugFile.cpp, TGUIEffectManagerCreate.cpp, TVectorCalls.cpp), struct sizes (ISO9660Directory/File), TMemory's two
-  TNodeList<MemBlockSlot> lists, and source bugs (TGUIWidget::AllowsFocus returns 0). Most of what is left is register
-  allocation, scheduling, block layout or x87 constant size (see COMPILER_LIMITED.md); the rest are unwritten bodies (the GUI
-  InitialiseStatic/DeinitialiseStatic property-set code, TGUIWindow/TGUILayoutInfo/TGUIWidgetInfo ctors and dtors).
-  Anti-cheat 2026-10-29 21:55: 2,433 verified (readable), 285 mismatches, 0 wrong targets; its one hard-rule violation
-  (packed statements in TRandom.cpp) is fixed. Last build round: round-246.
-- **Mismatch clean-up, round 226 (TKernelInterface):** the 4 wrong-target string operator+ (anti-cheat 2026-10-29 13:26) fixed by
-  moving every by-value TCString/TWString function into TCStringCtors.cpp (MATCHING_NOTES "round 226"). scoreall: 886 -> 900 matched,
-  0 regressions; anti-cheat 14:22: 2,339 verified, 0 wrong targets. Round 227: TCString::Mid MATCH (901). Last build round: round-227.
-- **TGuiInterface.dll (rounds 192-225, written from scratch).** scoreall at round 225: 490 matched, 47 open differences,
-  7 compiler-limited, 0 need a human, 613 not written yet (22 matched at round 192). scoreall numbers only: the anti-cheat has NOT
-  been re-run, VERIFIED_PROGRESS.md is stale. Same session: TKernelInterface 876 -> 888, PPropertyParser 201 -> 203.
-- Sources in `Src\TGuiInterface\` (flags.txt empty), one header per class in `Src\include\`: TGUIFunction family, TGUIAudioContext,
-  TGUIMemory, TGUIComponentInfo, TGUIRectangle/Alignment/Colour/Point, TGUIDisplayContext, TGUIStateRule/StyleState/StyleRootComponent,
-  TGUILayoutInfo/PropertySpec, TGUIDeserialisable, TGUIElement, the five TGUI*Component classes (+ TGUIComponentConstructors.cpp: the
-  default constructors live in their own file on purpose, see MATCHING_NOTES "TU-split rule"), the seven PPropertyBlock-derived
-  TGUI*Block classes, TGUIWidget, TGUIWindow, TGUIStyle, TGUIWidgetInfo, TGUILayoutManager, TGUITextureSection/FontGlyph/TextureAnimation.
-  Details: MATCHING_NOTES.md "TGuiInterface (rounds 192-208 ...)".
-- Last build round: round-225. Open / retry candidates (all 2/2 or compiler-limited unless noted): TGUIWidget::AllowsFocus (source: the
-  no-parent path returns 0, 2/2 used), GetInteriorWidth/Height (2/2), TGUIElement ctor, TGUIDeserialisable::ValidatePropertyInfo,
-  TGUIIconComponent factories, TGUIHorizontalTripletComponent::GetPreferredSize, TGUIPropertySpec::IsEnumerated; the empty
-  InitialiseStatic/DeinitialiseStatic stubs in the new classes are placeholders (the originals build the property sets).
-- Not written yet / entangled: TGUIScreen (second vtable, 74 todo), TGUIInterface (72), TGUIFont (needs a hash table), TGUIWidgetAction
-  (TDList/TFreeList/TGenericEmitter), TGUIActionMap, TGUIInputContext, TSortedArray<T, Comparator> (needed by every
-  GetPropertyInfoOrderedSet = vf12), TGUIStateVarInfo, the `ms_oPropertySetOrdered` statics, all constructors/destructors of the new
-  classes, Deserialise/Serialise bodies and the property Val_/Get_/Set_ functions that use other types.
-- Next step: TSortedArray + the vf12/ordered-set statics (unlocks ~10 small functions per class), then the constructors of the
-  classes written here, TGUIScreen accessors, then PGUICore.dll (823 functions).
-
-### Earlier state (2026-10-29, TKernelInterface sessions, rounds 090-188)
-- **TKernelInterface.dll (rounds 090-188).** scoreall at round 188: 876 matched, 115 open differences, 66 compiler-limited,
-  1 need a human (TCString::Mid, attempt 4/2), 569 not written yet. These are scoreall numbers; the anti-cheat has NOT
-  been re-run since, so VERIFIED_PROGRESS.md is stale. Run `C:\AntiCheat\anticheat.py` before quoting any number as verified.
-  Session notes: MATCHING_NOTES.md "rounds 123-178" and "rounds 180-188".
-- Sources in `Src\TKernelInterface\` (flags.txt empty on purpose, no `-Qsfalign`): TAABox, TPlane, TSphere,
-  TVector2/3/4, TQuaternion, TMatrix44, TMath (+TMathData.cpp for the exported PI), TRandom, TSystem, TCString
-  (TCString + TWString), TBitArray, TDList, TNodeList, TNTree, TPool, TFreeList, TKernelFiles (TFile family),
-  TKernelClass (TClass), TKernelSystem (ISO9660 structs, TKernelInterface and TScheduler accessors).
-  Kernel-internal headers: TKernelMisc.h, TKernelContainers.h, TGenericLists.h, TKernelFiles.h, TKernelClass.h,
-  TKernelSystem.h. Details and the matching tricks are in MATCHING_NOTES.md ("TKernelInterface rounds 093-122").
-- Open / filed lists and wall classes are in COMPILER_LIMITED.md and scoreall output (regalloc, shrink-wrap,
-  sched, fp, branch). Retry candidates with 1/2 attempts left: TVector2::IsNormalised, TVector3::IsReasonable,
-  SetUnitVectorProjection, SetVectorProjection, TMath::LineSegmentVsLine2D, ISO9660 operator=, TISOFileSystem ctor.
-- Not written yet: TMemory (nested MemNode/MemBlock), TObject-based classes (TTask, TTimer, TScheduler body,
-  TKernelInterface body), TLocale, TFileLexerUTF8/UTF16, string operator+ (needs an inline TCString ctor),
-  x87 TMath functions (Sin/Cos/Tan/ATan2/SinCos/Pow/Log/Exp: probably need `__asm`, a user decision),
-  the Ceil/Floor/Round family, TFileSystem Create/Open.
-- Next step: TObject-style layout for TKernelInterface/TScheduler/TTask, TMemory, then more TKernelInterface
-  FREE WIN clusters; after that TGuiInterface.dll (1157 functions, no Src dir yet) or PGUICore.dll (823).
-
-### Earlier state (2026-10-27)
-- **Mismatch clean-up (2026-10-28, rounds 85-88):** fixed the wrong-target match (PutPropertyUnique) and 7 more:
-  TQList::InsertTail through the node, iterator comparisons by value, `End()` cached in GetMaterial/GetProperty
-  (MATCHING_NOTES, last 5 lines). PPropertyParser 201, TRenderInterface 923 matched; no regressions. Leftover
-  experiment chains (VAR_*, TML_POS, TKF_FORM) resolved to their active branch. Tracker statuses caught up
-  (297 earlier matches were still 'todo'). Open: TQLIST_FORM (two forms of TQList.h in different files); ICC
-  branch-layout differences don't follow the source spelling (don't spend attempts swapping if/else).
-  Remaining differences: PPropertyParser 44, TRenderInterface 60 open + 50 compiler-limited, TInput 9 + 4.
-  Last build round: round-088.
-- **SimJP.exe added to the tracker (2026-10-28, user's decision - keep the numbers honest):** Notes\function_tracker.csv
-  now has 20,432 functions = 6,768 in the 18 DLLs + 13,664 in SimJP.exe (rows `SimJP.exe`; its 1,775 data exports
-  are not functions and are left out). Still to do: 19,298. trivial.py (re-run, Notes\generated\): 4,677 trivial
-  bodies, 815 identical-code clusters (52 FREE WIN) covering another 2,602, about 12,000 need real work.
-  The tracker lists exported functions only, in every binary: unexported statics/library code are not counted.
-  SimJP.exe source goes in `Src\SimJP\` (build request folder name `SimJP`; not built yet, so the first round may need build fixes). Tools\scoreall.py scores SimJP builds
-  (change applied 2026-10-28).
-- Readability review (2026-10-27, calibrated standard): 106 files readable, 6 "decompiled, not fully documented"
-  (TInputInterface.h m_unk04/m_unk10/m_unk34, TFileLexer.h m_pad04/m_pad09, TKernelInterface.h Slot0,
-  TMaterialLibrary/TGFXFileInstanceObject _SlotNN - names recoverable from the D3D DLL exports). Only the 5 old
-  copies in Src\*.cpp (root) are deleted. Documentation to-do: Notes\READABILITY_REVIEW.md.
-- Anti-cheat run 2026-10-27: 917 TRenderInterface functions verified, all readable (real names), 0 wrong
-  relocation targets, 0 rule violations. The other DLLs were not in the last build - re-verify with --rebuild.
-- verdict.py now tolerates only real relocations (exact .rel data) and checks every relocation target.
-
-### Earlier state (2026-10-21)
-- TRenderInterface: 917/1048 exported functions matched, 65 open differences (mostly regalloc/shrink-wrap: they
-  will be auto-filed on their next changed attempt), 45 known compiler-limited, 21 not written yet.
-- TApplication 16/16 and TInputInterface 74 matched earlier; PPropertyParser partly written (rounds 13-26).
-- Whole project: 5,634 functions still to do. trivial.py: 1,267 trivial (C++ generated), 371 identical-code
-  clusters cover another 1,024 (37 FREE WIN clusters, e.g. 99x `CreateObjectInPlace` = copy from
-  TCameraObject). About 3,300 need real work.
-- Next steps: (1) the 21 unwritten TRenderInterface functions; (2) FREE WIN clusters in clusters.md;
-  (3) paste trivial functions DLL by DLL, starting with the DLL you work on next.
-- Last build round: round-084.
+## Current state (newest sessions; older entries in Notes\HISTORY.md)
+- **2026-11-14 (TRenderD3DInterface, rounds 530-568, largest-first session).** scoreall: TRenderD3DInterface 144 -> 227 matched (13 open, 2 compiler-limited, 68 not written); regress rebuilds after the shared-header changes (TObject.h, TMath.h, TModel.h, TTextureResource.h): TRenderInterface 923 / TGuiInterface 716 / PGUICore 475 / PPropertyParser 206 / TInputDXInterface 92 / TInputInterface 85, all unchanged. Levers: gamma/colour helpers (TMath::Clip/Gain, GetHALMemInfo), index/vertex pool and block resources, TModelD3D (TModel slots renamed to the exported Create/Delete/Load/Unload/LoadTMDHAL; inline IsLoaded in TModel.h), the SAFE_RELEASE macro (original double null test, in d3d8min.h with the evidence comment), CreateModel, DestroyDisplay/AdjustDisplay, FailedD3D/FailedDisplay message boxes (strings read from the original), accelerator table, SetTextureAddressMode/SetDefaultRenderStates (new D3D enums), TTextureFactoryHAL::CreateTextureFromFile (friend + overload slot order: ICC gives overloaded virtuals their slots in reverse declaration order). Open/parked (in PERMUTER_TARGETS.txt and FOR_OPUS.md): IsTextureFormatSupported, Supports32BitTextures (filed), TMSWindow::Destroy and CreateAcceleratorTableA (the original does not inline the small callees), TVertexBlockResource::DestroyHAL, DestroyAdapterDatabase, TIndexBlockResource copy ctor. Handed to Opus: 7 lines. Placeholders renamed: m_iUnk10 -> m_hInstance (TMSWindow). Anti-cheat NOT re-run. Last build round: round-568. Next step: TRenderD3DInterface emitter/TWString/TD3DAdapter headers (BeginScene/EndScene/Update/Create/Destroy), HALBuffer structs, then the smaller DLLs without a Src dir (TRenderD3DInterface is the largest DLL already started; continue with the next unstarted DLL).
+- **2026-11-13 (PGUICore + TGuiInterface, rounds 468-516, evening session).** scoreall: PGUICore 456 -> 475 matched (59 open, 15 compiler-limited, 274 not written; PGUIDialog::OnButtonPress now matches, TGUIScreen::GetPointerPositionX/Y moved inline into the header); TGuiInterface 689 -> 716 (49 open, 26 compiler-limited, 368 not written; new minimal TGUIInputContext.h/.cpp with SetScreen, TGUIScreen::SetInputContext, TGUIScreen::OnButtonRelease; FindLayoutClass/FindComponentClass filed 2/2). Levers: GetStaticWidgetInfo/ms_widget_info on the 11 PGUICore widgets, TGUIInterface class-list statics (Add*/Get*ClassList), TGUIFont::SetScale, TGUIScreen accessors and members (+0xF8..+0x140), Clone for ListBox/MenuDialog/MenuBar/SliderBar/TableBox (MenuBar/SliderBar/TableBox needed trailing member placeholders m_unkAC/m_unkB4/m_unkDC to get the object size right; the TableBox member layout before +0xDC does not match its constructor and needs a rework). Open: Find*Class loops and FindFont/DeleteAllSkus (shrink-wrap/regalloc), TNodeList InsertTail family, dtor 'set vtable then call base' wall. Handed to Opus: 6 lines in FOR_OPUS.md. No placeholders renamed. Anti-cheat NOT re-run. Last build round: round-516. Next step: fix the PGUITableBox member layout against its ctor (0x18d90: emitters at +0x8C/+0x98, list at +0xA4), TGUIInputManager slots, then the smaller DLLs (no Src dir yet).
+- **2026-11-13 (PGUICore, session 07:14-09:09 UTC, rounds up to 467).** scoreall: PGUICore 433 matched (62 open differences, 14 compiler-limited,
+  314 not written yet; the last full figure of the previous list was 399 at round 436). Anti-cheat NOT re-run: scoreall numbers only. New/extended
+  sources: PGUIMenuDialog/MenuBar/MenuTree (FindItemData, GetItemAtIndex, OnButtonRepeat, AddMenus/RemoveMenus, InvokeMenu(int,int,int)),
+  PGUIMenuTreeItem (RemoveItem, ChooseChildItem, ChooseNextItem, FindChildItem), PGUIListBox (NotifyFocusLost, OnButtonRepeat, FindItemWidget,
+  FindWidgetItem, GetFirstItemWidget, Deserialise, DeleteItemList; new TU PGUIListBoxStyles.cpp for the style properties), PGUITableBox
+  (OnButtonRepeat, IsItemVisible), PGUIButton/PGUILayoutManager abstract factories, DiscLayout Val_offsetangle, TableBox Initialise/InsertStampWidgets, MenuTreeItemStyle::GetParameterCount, OverlayLayout::SetForceSameWidth, GridLayout::SetNumRows. Open walls (2/2 or 1/2, in
+  PERMUTER_TARGETS.txt): TNodeList::InsertTail hoisted-lea family (ListBox/TableBox AddItemImpl, MenuTreeItem::AddItem, DiscardButton x2,
+  DiscardDialog), callee-saved rotation (RemoveAllItemsImpl x2, SizeToFit, EnsureVisibleImpl x2), Val_ regalloc, PropagateState (stack frame).
+  Not written: functions that need TGUIWidget slots 34+ (slot 33 = Pack, 34 = Layout(-1,-1)), TGUIScreen members (+0x114/+0x118, +0xCC stack),
+  emitters (Throw), TMath::PI (kernel-internal header only), the TGUIInterface FindStyleInstance declaration. Last build round: round-467.
+  Next step: declare TGUIWidget slots 34-41 in TGUIWidget.h (check that TGuiInterface's vtable still links), then Layout/Paint/UpdateSelection
+  families; then PGUICore ctors/dtors and InitialiseStatic/DeinitialiseStatic; then the next smaller DLL (TRenderD3DInterface).

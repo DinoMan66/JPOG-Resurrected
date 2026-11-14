@@ -14,6 +14,7 @@
 #include "TGUIPropertySpec.h"
 
 class PProperties;
+class PPropertyValue;
 
 namespace Toshi {
 
@@ -36,6 +37,12 @@ public:
     virtual bool ValidatePropertyInfo(const TGUIPropertySpec* info) const;              // slot 8
     virtual void SetInterface(TGUIInterface* gui) = 0;                                  // slot 9
     virtual TGUIInterface* GetInterface() const = 0;                                    // slot 10
+
+    bool SetProperty(const TGUIPropertySpec* spec, const PPropertyValue& value);
+    bool SetProperty(const TPCString& name, const PPropertyValue& value);
+    bool ValidateProperty(const TPCString& name, const PPropertyValue& value) const;
+    PPropertyValue GetProperty(const TGUIPropertySpec* spec, bool& found) const;
+    PPropertyValue GetProperty(const TPCString& name, bool& found) const;
 
 protected:
     virtual const TArray<TGUIPropertySpec*>* GetPropertyInfoSet() const = 0;            // slot 11
